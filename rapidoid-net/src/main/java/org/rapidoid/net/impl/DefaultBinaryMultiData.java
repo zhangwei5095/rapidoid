@@ -1,10 +1,19 @@
 package org.rapidoid.net.impl;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.buffer.BufProvider;
+import org.rapidoid.data.BinaryMultiData;
+import org.rapidoid.data.KeyValueRanges;
+
+import java.util.Map;
+
 /*
  * #%L
  * rapidoid-net
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,23 +29,15 @@ package org.rapidoid.net.impl;
  * #L%
  */
 
-import java.util.Map;
-
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.buffer.Buf;
-import org.rapidoid.buffer.BufProvider;
-import org.rapidoid.data.BinaryMultiData;
-import org.rapidoid.data.KeyValueRanges;
-import org.rapidoid.data.Range;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class DefaultBinaryMultiData implements BinaryMultiData {
+public class DefaultBinaryMultiData extends RapidoidThing implements BinaryMultiData {
 
 	private final BufProvider src;
 
 	private final KeyValueRanges ranges;
+
+	private Map<String, byte[]> values;
 
 	public DefaultBinaryMultiData(BufProvider src, KeyValueRanges ranges) {
 		this.src = src;
@@ -44,8 +45,12 @@ public class DefaultBinaryMultiData implements BinaryMultiData {
 	}
 
 	@Override
-	public Map<String, byte[]> get() {
-		return ranges.toBinaryMap(src.buffer(), true);
+	public synchronized Map<String, byte[]> get() {
+		if (values == null) {
+			values = ranges.toBinaryMap(src.buffer(), true);
+		}
+
+		return values;
 	}
 
 	@Override
@@ -60,9 +65,12 @@ public class DefaultBinaryMultiData implements BinaryMultiData {
 
 	@Override
 	public byte[] get(String name) {
-		Buf buf = src.buffer();
-		Range range = ranges.get(buf, name.getBytes(), false);
-		return range != null ? range.bytes(buf) : null;
+		return get().get(name);
+	}
+
+	@Override
+	public synchronized void reset() {
+		values = null;
 	}
 
 }

@@ -1,10 +1,14 @@
 package org.rapidoid.net;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+
 /*
  * #%L
  * rapidoid-net
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,36 +24,12 @@ package org.rapidoid.net;
  * #L%
  */
 
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.inject.IoC;
-import org.rapidoid.net.impl.RapidoidClientLoop;
-import org.rapidoid.net.impl.RapidoidServerLoop;
-import org.rapidoid.net.impl.TCPClientBuilder;
-import org.rapidoid.net.impl.TCPServerBuilder;
-
 @Authors("Nikolche Mihajlovski")
-@Since("2.0.0")
-public class TCP {
+@Since("5.1.0")
+public class TCP extends RapidoidThing {
 
-	public static TCPServerBuilder server() {
-		return IoC.builder(TCPServerBuilder.class, TCPServer.class, RapidoidServerLoop.class);
-	}
-
-	public static TCPServer listen(Protocol protocol) {
-		TCPServer server = TCP.server().protocol(protocol).build();
-		server.start();
-		return server;
-	}
-
-	public static TCPClientBuilder client() {
-		return IoC.builder(TCPClientBuilder.class, TCPClient.class, RapidoidClientLoop.class);
-	}
-
-	public static TCPClient connect(String host, int port, Protocol protocol) {
-		TCPClient client = TCP.client().host(host).port(port).protocol(protocol).build();
-		client.start();
-		return client;
+	public static ServerBuilder server() {
+		return new ServerBuilder();
 	}
 
 }

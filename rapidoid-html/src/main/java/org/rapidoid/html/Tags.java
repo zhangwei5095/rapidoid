@@ -1,10 +1,21 @@
 package org.rapidoid.html;
 
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.commons.Str;
+import org.rapidoid.html.impl.ConstantTag;
+import org.rapidoid.html.impl.TagProxy;
+import org.rapidoid.html.impl.UndefinedTag;
+import org.rapidoid.var.Var;
+import org.rapidoid.var.Vars;
+
+import java.util.Collection;
+
 /*
  * #%L
  * rapidoid-html
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,32 +31,12 @@ package org.rapidoid.html;
  * #L%
  */
 
-import java.util.Collection;
-
-import org.apache.commons.lang3.StringEscapeUtils;
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.html.impl.ConstantTag;
-import org.rapidoid.html.impl.TagContextImpl;
-import org.rapidoid.html.impl.TagProxy;
-import org.rapidoid.html.impl.UndefinedTag;
-import org.rapidoid.html.tag.InputTag;
-import org.rapidoid.html.tag.OptionTag;
-import org.rapidoid.html.tag.TextareaTag;
-import org.rapidoid.util.U;
-import org.rapidoid.var.Var;
-import org.rapidoid.var.Vars;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
 public class Tags extends BasicUtils {
 
-	public static <T> Var<T> var(T value) {
-		return Vars.var(value);
-	}
-
-	public static TagContext context() {
-		return new TagContextImpl();
+	public static <T> Var<T> var(String name, T value) {
+		return Vars.var(name, value);
 	}
 
 	public static <TAG extends Tag> TAG tag(Class<TAG> clazz, String tagName, Object... contents) {
@@ -57,7 +48,7 @@ public class Tags extends BasicUtils {
 	}
 
 	public static String escape(String s) {
-		return StringEscapeUtils.escapeHtml4(s);
+		return Str.xmlEscape(s);
 	}
 
 	public static void traverse(Object contents, TagProcessor<Tag> processor) {
@@ -69,7 +60,7 @@ public class Tags extends BasicUtils {
 			} else {
 				Tag tag = (Tag) contents;
 				processor.handle(tag);
-				traverse(tag.content(), processor);
+				traverse(tag.contents(), processor);
 			}
 		} else if (contents instanceof TagWidget) {
 			Object widgetContent = ((TagWidget<?>) contents).render(null);
@@ -86,27 +77,6 @@ public class Tags extends BasicUtils {
 			for (Object cont : coll) {
 				traverse(cont, processor);
 			}
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	public static <T extends Tag> T withValue(T tag, Object value) {
-
-		if (tag instanceof InputTag) {
-			InputTag input = (InputTag) tag;
-			if ("checkbox".equals(input.type()) || "radio".equals(input.type())) {
-				return (T) input.checked(value != null ? bool(value) : false);
-			} else {
-				return (T) input.value(value != null ? str(value) : "");
-			}
-		} else if (tag instanceof TextareaTag) {
-			TextareaTag textArea = (TextareaTag) tag;
-			return (T) textArea.content(value != null ? str(value) : "");
-		} else if (tag instanceof OptionTag) {
-			OptionTag optionTag = (OptionTag) tag;
-			return (T) optionTag.selected(value != null ? bool(value) : false);
-		} else {
-			throw U.rte("Cannot set value to a '%s' tag!", ((Tag) tag).tagKind());
 		}
 	}
 

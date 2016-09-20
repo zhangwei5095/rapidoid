@@ -3,13 +3,12 @@ package org.rapidoid.html;
 import org.rapidoid.annotation.Authors;
 import org.rapidoid.annotation.Since;
 import org.rapidoid.annotation.Special;
-import org.rapidoid.var.Var;
 
 /*
  * #%L
  * rapidoid-html
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +29,7 @@ import org.rapidoid.var.Var;
 public interface SpecificTag<TAG extends SpecificTag<?>> extends Tag {
 
 	@Special
-	TAG content(Object... content);
+	TAG contents(Object... content);
 
 	@Special
 	TAG append(Object... content);
@@ -49,9 +48,6 @@ public interface SpecificTag<TAG extends SpecificTag<?>> extends Tag {
 
 	@Special
 	TAG is(String attr, boolean value);
-
-	@Special
-	<T> TAG bind(Var<T> var);
 
 	@Special
 	TAG cmd(String cmd, Object... args);

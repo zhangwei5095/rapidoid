@@ -1,10 +1,20 @@
 package org.rapidoid.bytes;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.commons.Err;
+import org.rapidoid.data.BufRange;
+import org.rapidoid.data.BufRanges;
+import org.rapidoid.util.Constants;
+import org.rapidoid.util.Msc;
+import org.rapidoid.wrap.IntWrap;
+
 /*
  * #%L
  * rapidoid-buffer
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,20 +30,15 @@ package org.rapidoid.bytes;
  * #L%
  */
 
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.data.Range;
-import org.rapidoid.data.Ranges;
-import org.rapidoid.util.Constants;
-import org.rapidoid.util.U;
-import org.rapidoid.util.UTILS;
-import org.rapidoid.wrap.IntWrap;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class BytesUtil implements Constants {
+public class BytesUtil extends RapidoidThing implements Constants {
 
 	public static final byte[] CHARS_SWITCH_CASE = new byte[128];
+
+	private static final String URI_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&()'*+,;=%";
+
+	private static final boolean[] URI_ALLOWED_CHARACTER = new boolean[128];
 
 	static {
 		for (int ch = 0; ch < 128; ch++) {
@@ -44,6 +49,8 @@ public class BytesUtil implements Constants {
 			} else {
 				CHARS_SWITCH_CASE[ch] = (byte) ch;
 			}
+
+			URI_ALLOWED_CHARACTER[ch] = URI_CHARACTERS.indexOf(ch) >= 0;
 		}
 	}
 
@@ -55,7 +62,7 @@ public class BytesUtil implements Constants {
 		return new StringBytes(s);
 	}
 
-	public static int parseLines(Bytes bytes, Ranges lines, IntWrap res, int start, int limit, byte end1, byte end2) {
+	public static int parseLines(Bytes bytes, BufRanges lines, IntWrap res, int start, int limit, byte end1, byte end2) {
 		byte b0 = 0, b1 = 0, b2 = 0, b3 = 0;
 		int ret = -1;
 		res.value = NOT_FOUND;
@@ -96,7 +103,7 @@ public class BytesUtil implements Constants {
 		return ret;
 	}
 
-	public static int parseLines(Bytes bytes, Ranges lines, int start, int limit) {
+	public static int parseLines(Bytes bytes, BufRanges lines, int start, int limit) {
 		byte b0 = 0, b1 = 0;
 		int ret = -1;
 
@@ -128,7 +135,7 @@ public class BytesUtil implements Constants {
 		return ret;
 	}
 
-	public static int parseLine(Bytes bytes, Range line, int start, int limit) {
+	public static int parseLine(Bytes bytes, BufRange line, int start, int limit) {
 		byte b0 = 0, b1 = 0;
 		int ret = -1;
 
@@ -155,7 +162,7 @@ public class BytesUtil implements Constants {
 		return ret;
 	}
 
-	public static Range getByPrefix(Bytes bytes, Ranges ranges, byte[] prefix, boolean caseSensitive) {
+	public static BufRange getByPrefix(Bytes bytes, BufRanges ranges, byte[] prefix, boolean caseSensitive) {
 		for (int i = 0; i < ranges.count; i++) {
 			if (startsWith(bytes, ranges.ranges[i], prefix, caseSensitive)) {
 				return ranges.ranges[i];
@@ -164,11 +171,11 @@ public class BytesUtil implements Constants {
 		return null;
 	}
 
-	public static String get(Bytes bytes, Range range) {
+	public static String get(Bytes bytes, BufRange range) {
 		return new String(getBytes(bytes, range));
 	}
 
-	public static byte[] getBytes(Bytes bytes, Range range) {
+	public static byte[] getBytes(Bytes bytes, BufRange range) {
 		byte[] byteArr = new byte[range.length];
 		for (int i = 0; i < byteArr.length; i++) {
 			byteArr[i] = bytes.get(range.start + i);
@@ -255,7 +262,7 @@ public class BytesUtil implements Constants {
 	}
 
 	public static int find(Bytes bytes, int start, int limit, byte[] match, int offset, int length,
-			boolean caseSensitive) {
+	                       boolean caseSensitive) {
 
 		assert start >= 0;
 		assert limit >= 0;
@@ -273,7 +280,7 @@ public class BytesUtil implements Constants {
 	}
 
 	private static int findNoCase(Bytes bytes, int start, int limit, byte[] match, int offset, int length) {
-		throw U.notReady();
+		throw Err.notReady();
 	}
 
 	private static int findSensitive(Bytes bytes, int start, int limit, byte[] match, int offset, int length) {
@@ -294,7 +301,7 @@ public class BytesUtil implements Constants {
 		return -1;
 	}
 
-	public static boolean matches(Bytes bytes, Range target, byte[] match, boolean caseSensitive) {
+	public static boolean matches(Bytes bytes, BufRange target, byte[] match, boolean caseSensitive) {
 
 		if (target.length != match.length || target.start < 0 || target.last() >= bytes.limit()) {
 			return false;
@@ -305,7 +312,7 @@ public class BytesUtil implements Constants {
 		return result;
 	}
 
-	public static boolean startsWith(Bytes bytes, Range target, byte[] match, boolean caseSensitive) {
+	public static boolean startsWith(Bytes bytes, BufRange target, byte[] match, boolean caseSensitive) {
 
 		if (target.length < match.length || target.start < 0 || target.last() >= bytes.limit()) {
 			return false;
@@ -316,7 +323,7 @@ public class BytesUtil implements Constants {
 		return result;
 	}
 
-	public static boolean containsAt(Bytes bytes, Range target, int offset, byte[] match, boolean caseSensitive) {
+	public static boolean containsAt(Bytes bytes, BufRange target, int offset, byte[] match, boolean caseSensitive) {
 
 		if (offset < 0 || target.length < offset + match.length || target.start < 0 || target.last() >= bytes.limit()) {
 			return false;
@@ -327,7 +334,7 @@ public class BytesUtil implements Constants {
 		return result;
 	}
 
-	public static void trim(Bytes bytes, Range target) {
+	public static void trim(Bytes bytes, BufRange target) {
 
 		int start = target.start;
 		int len = target.length;
@@ -348,10 +355,9 @@ public class BytesUtil implements Constants {
 
 		target.start = start;
 		target.length = finish - start + 1;
-
 	}
 
-	public static boolean split(Bytes bytes, Range target, byte sep, Range before, Range after, boolean trimParts) {
+	public static boolean split(Bytes bytes, BufRange target, byte sep, BufRange before, BufRange after, boolean trimParts) {
 
 		int pos = find(bytes, target.start, target.limit(), sep, true);
 
@@ -382,11 +388,9 @@ public class BytesUtil implements Constants {
 	 * against the specified search prefix. Returns the position of the separator, or <code>-1</code> if the limit is
 	 * reached and separator not found. If the prefix is matched, the negative of the position is returned, to mark the
 	 * prefix match. Duplicated code for performance reasons.
-	 * 
-	 * @param range
 	 */
-	public static int scanUntilAndMatchPrefix(Bytes bytes, Range result, byte separator, int fromPos, int toPos,
-			int searchPrefix) {
+	public static int scanUntilAndMatchPrefix(Bytes bytes, BufRange result, byte separator, int fromPos, int toPos,
+	                                          int searchPrefix) {
 
 		byte b0, b1, b2, b3;
 
@@ -438,7 +442,7 @@ public class BytesUtil implements Constants {
 			return NOT_FOUND;
 		}
 
-		int prefix = UTILS.intFrom(b0, b1, b2, b3);
+		int prefix = Msc.intFrom(b0, b1, b2, b3);
 
 		boolean matchedPrefix = prefix == searchPrefix;
 
@@ -460,7 +464,7 @@ public class BytesUtil implements Constants {
 	 * limit is reached and separator not found. If the prefix is matched, the negative of the position is returned, to
 	 * mark the prefix match. Duplicated code for performance reasons.
 	 */
-	public static int scanLnAndMatchPrefix(Bytes bytes, Range result, int fromPos, int toPos, int searchPrefix) {
+	public static int scanLnAndMatchPrefix(Bytes bytes, BufRange result, int fromPos, int toPos, int searchPrefix) {
 
 		byte b0, b1, b2, b3;
 
@@ -524,7 +528,7 @@ public class BytesUtil implements Constants {
 			return NOT_FOUND;
 		}
 
-		int prefix = UTILS.intFrom(b0, b1, b2, b3);
+		int prefix = Msc.intFrom(b0, b1, b2, b3);
 
 		boolean matchedPrefix = prefix == searchPrefix;
 
@@ -544,6 +548,76 @@ public class BytesUtil implements Constants {
 
 		result.reset();
 		return NOT_FOUND;
+	}
+
+	public static boolean isValidURI(Bytes bytes, BufRange uri) {
+		int start = uri.start;
+		int len = uri.length;
+		int last = uri.last();
+
+		if (len == 0 || bytes.get(start) != '/') {
+			return false;
+		}
+
+		boolean inPath = true;
+
+		byte prev = '/';
+		for (int p = start + 1; p <= last; p++) {
+			byte b = bytes.get(p);
+
+			if (b <= 0 || !URI_ALLOWED_CHARACTER[b]) {
+				return false;
+			}
+
+			// disallow '..' OR '//' in the URI's PATH (before the '?')
+			if (inPath) {
+				if (b == '.' || b == '/') {
+					if (prev == b) {
+						return false;
+					}
+				} else if (b == '?') {
+					inPath = false;
+				}
+			}
+
+			prev = b;
+		}
+
+		return true;
+	}
+
+	public static int getIntPrefixOf(Bytes bytes, int position, int limit) {
+		byte b0, b1, b2, b3;
+
+		int p = position;
+		if (p < limit) {
+			b0 = bytes.get(p);
+		} else {
+			return 0;
+		}
+
+		p++;
+		if (p < limit) {
+			b1 = bytes.get(p);
+		} else {
+			return Msc.intFrom(b0, BYTE_0, BYTE_0, BYTE_0);
+		}
+
+		p++;
+		if (p < limit) {
+			b2 = bytes.get(p);
+		} else {
+			return Msc.intFrom(b0, b1, BYTE_0, BYTE_0);
+		}
+
+		p++;
+		if (p < limit) {
+			b3 = bytes.get(p);
+		} else {
+			return Msc.intFrom(b0, b1, b2, BYTE_0);
+		}
+
+		return Msc.intFrom(b0, b1, b2, b3);
 	}
 
 }

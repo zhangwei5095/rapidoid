@@ -1,10 +1,18 @@
 package org.rapidoid.html;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.cls.Cls;
+import org.rapidoid.u.U;
+
+import java.util.Date;
+
 /*
  * #%L
  * rapidoid-html
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,16 +28,9 @@ package org.rapidoid.html;
  * #L%
  */
 
-import java.util.Date;
-
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.util.Cls;
-import org.rapidoid.util.U;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class BasicUtils {
+public class BasicUtils extends RapidoidThing {
 
 	public static boolean eq(Object a, Object b) {
 		return U.eq(a, b);

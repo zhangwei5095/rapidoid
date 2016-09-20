@@ -2,12 +2,13 @@ package org.rapidoid.oauth;
 
 import org.rapidoid.annotation.Authors;
 import org.rapidoid.annotation.Since;
+import org.rapidoid.value.Value;
 
 /*
  * #%L
  * rapidoid-oauth
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +28,7 @@ import org.rapidoid.annotation.Since;
 @Since("2.0.0")
 public interface OAuthStateCheck {
 
-	String generateState(String clientSecret, String sessionId);
+	String generateState(Value<String> clientSecret, String sessionId);
 
 	boolean isValidState(String state, String clientSecret, String sessionId);
 

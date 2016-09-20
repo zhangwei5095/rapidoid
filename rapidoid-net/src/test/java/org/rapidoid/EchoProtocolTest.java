@@ -4,7 +4,7 @@ package org.rapidoid;
  * #%L
  * rapidoid-net
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,17 +20,18 @@ package org.rapidoid;
  * #L%
  */
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-
+import org.junit.Test;
 import org.rapidoid.annotation.Authors;
 import org.rapidoid.annotation.Since;
 import org.rapidoid.lambda.F2;
 import org.rapidoid.net.Protocol;
 import org.rapidoid.net.abstracts.Channel;
-import org.rapidoid.util.UTILS;
-import org.testng.annotations.Test;
+import org.rapidoid.util.Msc;
+
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
@@ -49,7 +50,7 @@ public class EchoProtocolTest extends NetTestCommons {
 		}, new Runnable() {
 			@Override
 			public void run() {
-				UTILS.connect("localhost", 8080, new F2<Void, BufferedReader, DataOutputStream>() {
+				Msc.connect("localhost", 8888, new F2<Void, BufferedReader, DataOutputStream>() {
 					@Override
 					public Void execute(BufferedReader in, DataOutputStream out) throws IOException {
 						out.writeBytes("hello\n");
@@ -76,12 +77,12 @@ public class EchoProtocolTest extends NetTestCommons {
 			public void process(final Channel ctx) {
 				final String in = ctx.readln();
 
-				UTILS.schedule(new Runnable() {
+				Msc.EXECUTOR.schedule(new Runnable() {
 					@Override
 					public void run() {
 						ctx.write(in.toUpperCase()).write(CR_LF).done().closeIf(in.equals("bye"));
 					}
-				}, 1000);
+				}, 1, TimeUnit.SECONDS);
 
 				ctx.async();
 			}
@@ -89,7 +90,7 @@ public class EchoProtocolTest extends NetTestCommons {
 		}, new Runnable() {
 			@Override
 			public void run() {
-				UTILS.connect("localhost", 8080, new F2<Void, BufferedReader, DataOutputStream>() {
+				Msc.connect("localhost", 8888, new F2<Void, BufferedReader, DataOutputStream>() {
 					@Override
 					public Void execute(BufferedReader in, DataOutputStream out) throws IOException {
 						out.writeBytes("a\n");

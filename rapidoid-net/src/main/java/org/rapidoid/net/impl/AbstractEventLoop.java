@@ -1,10 +1,22 @@
 package org.rapidoid.net.impl;
 
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.log.Log;
+import org.rapidoid.u.U;
+
+import java.io.IOException;
+import java.nio.channels.ClosedSelectorException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.util.Iterator;
+import java.util.Set;
+
 /*
  * #%L
  * rapidoid-net
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,22 +32,13 @@ package org.rapidoid.net.impl;
  * #L%
  */
 
-import java.io.IOException;
-import java.nio.channels.ClosedSelectorException;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.util.Iterator;
-import java.util.Set;
-
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.log.Log;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
 public abstract class AbstractEventLoop<T> extends AbstractLoop<T> {
 
 	protected final Selector selector;
+
+	protected volatile long approxTime = U.time();
 
 	public AbstractEventLoop(String name) {
 		super(name);
@@ -45,7 +48,7 @@ public abstract class AbstractEventLoop<T> extends AbstractLoop<T> {
 		try {
 			sel = Selector.open();
 		} catch (IOException e) {
-			Log.severe("Cannot open selector!", e);
+			Log.error("Cannot open selector!", e);
 			throw new RuntimeException(e);
 		}
 
@@ -58,7 +61,7 @@ public abstract class AbstractEventLoop<T> extends AbstractLoop<T> {
 		}
 
 		if (key.isAcceptable()) {
-			Log.debug("accepting", "key", key);
+			Log.trace("accepting", "key", key);
 
 			try {
 				acceptOP(key);
@@ -71,7 +74,7 @@ public abstract class AbstractEventLoop<T> extends AbstractLoop<T> {
 			}
 
 		} else if (key.isConnectable()) {
-			Log.debug("connection event", "key", key);
+			Log.trace("connection event", "key", key);
 
 			try {
 				connectOP(key);
@@ -83,7 +86,7 @@ public abstract class AbstractEventLoop<T> extends AbstractLoop<T> {
 				Log.error("connect failed for key: " + key, e);
 			}
 		} else if (key.isReadable()) {
-			Log.debug("reading", "key", key);
+			Log.trace("reading", "key", key);
 
 			try {
 				readOP(key);
@@ -96,7 +99,7 @@ public abstract class AbstractEventLoop<T> extends AbstractLoop<T> {
 			}
 
 		} else if (key.isWritable()) {
-			Log.debug("writing", "key", key);
+			Log.trace("writing", "key", key);
 
 			try {
 				writeOP(key);
@@ -113,10 +116,12 @@ public abstract class AbstractEventLoop<T> extends AbstractLoop<T> {
 	@Override
 	protected final void insideLoop() {
 
+		approxTime = U.time();
+
 		try {
 			doProcessing();
 		} catch (Throwable e) {
-			Log.severe("Event processing error!", e);
+			Log.error("Event processing error!", e);
 		}
 
 		try {
@@ -124,6 +129,8 @@ public abstract class AbstractEventLoop<T> extends AbstractLoop<T> {
 		} catch (IOException e) {
 			Log.error("Select failed!", e);
 		}
+
+		approxTime = U.time();
 
 		try {
 			Set<SelectionKey> selectedKeys = selector.selectedKeys();

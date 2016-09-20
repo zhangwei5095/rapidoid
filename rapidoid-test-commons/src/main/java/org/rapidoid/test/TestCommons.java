@@ -4,7 +4,7 @@ package org.rapidoid.test;
  * #%L
  * rapidoid-test-commons
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,16 +20,19 @@ package org.rapidoid.test;
  * #L%
  */
 
-import java.io.File;
-import java.net.URL;
-import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.mockito.Mockito;
 import org.mockito.stubbing.OngoingStubbing;
-import org.testng.Assert;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
+
+import java.io.*;
+import java.lang.management.ManagementFactory;
+import java.net.URL;
+import java.util.Map.Entry;
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * @author Nikolche Mihajlovski
@@ -37,24 +40,57 @@ import org.testng.annotations.BeforeMethod;
  */
 public abstract class TestCommons {
 
+	protected static final boolean ADJUST_RESULTS = false;
+
 	protected static final Random RND = new Random();
+
+	public static final String TEST_RESULTS_FOLDER = "test-results";
 
 	private volatile boolean hasError = false;
 
-	@BeforeMethod(alwaysRun = true)
-	public void init() {
-		hasError = false;
+	private long waitingFrom;
+
+	private static boolean initialized = false;
+
+	private static String OS = System.getProperty("os.name").toLowerCase();
+
+	@BeforeClass
+	public static void beforeTests() {
+		initialized = false;
 	}
 
-	@AfterMethod(alwaysRun = true)
+	@Before
+	public final void initTest() {
+		System.out.println("--------------------------------------------------------------------------------");
+		System.out.println(" @" + ManagementFactory.getRuntimeMXBean().getName() + " TEST " + getClass().getCanonicalName());
+		System.out.println("--------------------------------------------------------------------------------");
+
+		hasError = false;
+
+		String s = File.separator;
+		String resultsDir = "src" + s + "test" + s + "resources" + s + TEST_RESULTS_FOLDER + s + getTestName();
+
+		if (!initialized && ADJUST_RESULTS) {
+			File testDir = new File(resultsDir);
+
+			if (testDir.isDirectory()) {
+				delete(testDir);
+			}
+
+			initialized = true;
+		}
+	}
+
+	@After
 	public void checkForErrors() {
 		if (hasError) {
 			Assert.fail("Assertion error(s) occured, probably were caught or were thrown on non-main thread!");
 		}
 	}
 
-	protected void registerError(AssertionError e) {
+	protected void registerError(Throwable e) {
 		hasError = true;
+		e.printStackTrace();
 	}
 
 	protected void fail(String msg) {
@@ -114,9 +150,9 @@ public abstract class TestCommons {
 		}
 	}
 
-	protected void neq(Object actual, Object expected) {
+	protected void neq(Object actual, Object unexpected) {
 		try {
-			Assert.assertNotEquals(actual, expected);
+			Assert.assertNotEquals(unexpected, actual);
 		} catch (AssertionError e) {
 			registerError(e);
 			throw e;
@@ -125,7 +161,7 @@ public abstract class TestCommons {
 
 	protected void eq(Object actual, Object expected) {
 		try {
-			Assert.assertEquals(actual, expected);
+			Assert.assertEquals(expected, actual);
 		} catch (AssertionError e) {
 			registerError(e);
 			throw e;
@@ -134,7 +170,7 @@ public abstract class TestCommons {
 
 	protected void eq(String actual, String expected) {
 		try {
-			Assert.assertEquals(actual, expected);
+			Assert.assertEquals(expected, actual);
 		} catch (AssertionError e) {
 			registerError(e);
 			throw e;
@@ -143,7 +179,7 @@ public abstract class TestCommons {
 
 	protected void eq(char actual, char expected) {
 		try {
-			Assert.assertEquals(actual, expected);
+			Assert.assertEquals(expected, actual);
 		} catch (AssertionError e) {
 			registerError(e);
 			throw e;
@@ -152,7 +188,7 @@ public abstract class TestCommons {
 
 	protected void eq(long actual, long expected) {
 		try {
-			Assert.assertEquals(actual, expected);
+			Assert.assertEquals(expected, actual);
 		} catch (AssertionError e) {
 			registerError(e);
 			throw e;
@@ -160,8 +196,16 @@ public abstract class TestCommons {
 	}
 
 	protected void eq(double actual, double expected) {
+		eq(actual, expected, 0);
+	}
+
+	protected void eqApprox(double actual, double expected) {
+		eq(actual, expected, 0.0000000001);
+	}
+
+	protected void eq(double actual, double expected, double delta) {
 		try {
-			Assert.assertEquals(actual, expected);
+			Assert.assertEquals(expected, actual, delta);
 		} catch (AssertionError e) {
 			registerError(e);
 			throw e;
@@ -170,11 +214,83 @@ public abstract class TestCommons {
 
 	protected void eq(byte[] actual, byte[] expected) {
 		try {
-			Assert.assertEquals(actual, expected);
+			Assert.assertArrayEquals(expected, actual);
 		} catch (AssertionError e) {
 			registerError(e);
 			throw e;
 		}
+	}
+
+	protected void eq(char[] actual, char[] expected) {
+		try {
+			Assert.assertArrayEquals(expected, actual);
+		} catch (AssertionError e) {
+			registerError(e);
+			throw e;
+		}
+	}
+
+	protected void eq(int[] actual, int[] expected) {
+		try {
+			Assert.assertArrayEquals(expected, actual);
+		} catch (AssertionError e) {
+			registerError(e);
+			throw e;
+		}
+	}
+
+	protected void eq(long[] actual, long[] expected) {
+		try {
+			Assert.assertArrayEquals(expected, actual);
+		} catch (AssertionError e) {
+			registerError(e);
+			throw e;
+		}
+	}
+
+	protected void eq(float[] actual, float[] expected, float delta) {
+		try {
+			Assert.assertArrayEquals(expected, actual, delta);
+		} catch (AssertionError e) {
+			registerError(e);
+			throw e;
+		}
+	}
+
+	protected void eq(double[] actual, double[] expected, double delta) {
+		try {
+			Assert.assertArrayEquals(expected, actual, delta);
+		} catch (AssertionError e) {
+			registerError(e);
+			throw e;
+		}
+	}
+
+	protected void eq(boolean[] actual, boolean[] expected) {
+		try {
+			Assert.assertArrayEquals(expected, actual);
+		} catch (AssertionError e) {
+			registerError(e);
+			throw e;
+		}
+	}
+
+	protected void eq(Object[] actual, Object[] expected) {
+		try {
+			Assert.assertArrayEquals(expected, actual);
+		} catch (AssertionError e) {
+			registerError(e);
+			throw e;
+		}
+	}
+
+	protected void eq(String actual, long expected) {
+		eq(Long.parseLong(actual), expected);
+	}
+
+	protected <K, V> void eq(Entry<K, V> entry, K key, V value) {
+		eq(entry.getKey(), key);
+		eq(entry.getValue(), value);
 	}
 
 	protected void expectedException() {
@@ -186,9 +302,9 @@ public abstract class TestCommons {
 		}
 	}
 
-	protected void hasType(Object instance, Class<?> clazz) {
+	protected void hasType(Object instance, Class<?> expectedClass) {
 		try {
-			Assert.assertEquals(instance.getClass(), clazz);
+			Assert.assertEquals(expectedClass, instance.getClass());
 		} catch (AssertionError e) {
 			registerError(e);
 			throw e;
@@ -251,8 +367,31 @@ public abstract class TestCommons {
 		return getClass().getClassLoader().getResource(filename);
 	}
 
-	protected File resourceFile(String filename) {
-		return new File(resource(filename).getFile());
+	protected byte[] readBytes(InputStream input) {
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+		byte[] buffer = new byte[16 * 1024];
+
+		try {
+			int readN = 0;
+			while ((readN = input.read(buffer)) != -1) {
+				output.write(buffer, 0, readN);
+			}
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+
+		return output.toByteArray();
+	}
+
+	protected byte[] loadRes(String filename) {
+		InputStream input = TestCommons.class.getClassLoader().getResourceAsStream(filename);
+
+		if (input == null) {
+			throw new RuntimeException("Cannot find resource: " + filename);
+		}
+
+		return readBytes(input);
 	}
 
 	protected <T> T mock(Class<T> classToMock) {
@@ -265,6 +404,10 @@ public abstract class TestCommons {
 
 	protected <T> void returns(T methodCall, T result) {
 		Mockito.when(methodCall).thenReturn(result);
+	}
+
+	protected <T> T verify(T mock) {
+		return Mockito.verify(mock);
 	}
 
 	protected void multiThreaded(int threadsN, final int count, final Runnable runnable) {
@@ -281,7 +424,9 @@ public abstract class TestCommons {
 						runnable.run();
 					}
 					latch.countDown();
-				};
+				}
+
+				;
 			}.start();
 		}
 
@@ -308,7 +453,18 @@ public abstract class TestCommons {
 		fail("Expected SecurityException to be thrown!");
 	}
 
-	protected void throwsRuntimeException(Runnable code, String errMsgPart) {
+	protected void throwsRTE(String errMsg, Runnable code) {
+		try {
+			code.run();
+		} catch (RuntimeException e) {
+			Throwable err = rootCause(e);
+			isTrue(err.getMessage().equals(errMsg));
+			return;
+		}
+		fail(String.format("Expected RuntimeException(%s) to be thrown!", errMsg));
+	}
+
+	protected void throwsRuntimeExceptionContaining(String errMsgPart, Runnable code) {
 		try {
 			code.run();
 		} catch (RuntimeException e) {
@@ -316,7 +472,147 @@ public abstract class TestCommons {
 			isTrue(err.getMessage().contains(errMsgPart));
 			return;
 		}
-		fail("Expected RuntimeException to be thrown!");
+		fail(String.format("Expected RuntimeException(...%s...) to be thrown!", errMsgPart));
+	}
+
+	protected void waiting() {
+		waitingFrom = System.currentTimeMillis();
+	}
+
+	protected void timeout(int ms) {
+		if (System.currentTimeMillis() - waitingFrom > ms) {
+			fail("Reached waiting timeout: " + ms + " ms!");
+		}
+	}
+
+	protected static long num(String num) {
+		return Long.parseLong(num);
+	}
+
+	protected File createTempFile() {
+		File file;
+		try {
+			file = File.createTempFile("temp", "" + System.nanoTime());
+		} catch (IOException e) {
+			throw new RuntimeException("Couldn't create temporary file!", e);
+		}
+
+		file.deleteOnExit();
+		return file;
+	}
+
+	protected String getTestName() {
+		return getClass().getSimpleName();
+	}
+
+	protected String getTestMethodName() {
+		StackTraceElement[] trace = Thread.currentThread().getStackTrace();
+
+		String method = null;
+
+		for (StackTraceElement trc : trace) {
+			String cls = trc.getClassName();
+			if (cls.equals(getClass().getName())) {
+				method = trc.getMethodName();
+			}
+		}
+
+		if (method == null) {
+			throw new RuntimeException("Cannot calculate the test name!");
+		}
+
+		return method;
+	}
+
+	protected boolean isEq(Object a, Object b) {
+		return a == null ? b == null : a.equals(b);
+	}
+
+	protected boolean httpResultsMatch(String actual, String expected) {
+		return isEq(platformNeutral(actual), platformNeutral(expected));
+	}
+
+	private String platformNeutral(String httpResponse) {
+		if (OS.contains("win")) {
+
+			// remove carriage returns to make tests platform independent
+			httpResponse = httpResponse.replaceAll("(\\r)", "");
+
+			// remove the content length line to make tests pass on any platform
+			httpResponse = httpResponse.replaceAll("Content-Length:([0-9\\n ]+)", "");
+		}
+
+		return httpResponse;
+	}
+
+	protected void check(String desc, String actual, String expected) {
+		actual = platformNeutral(actual);
+		expected = platformNeutral(expected);
+
+		if (!isEq(actual, expected)) {
+			System.out.println("FAILURE: " + desc);
+		}
+
+		eq(actual, expected);
+	}
+
+	protected void delete(File file) {
+		if (file.isDirectory()) {
+			File[] files = file.listFiles();
+			if (files != null) {
+				for (File f : files) {
+					delete(f);
+				}
+			}
+		}
+
+		if (!file.delete()) {
+			throw new RuntimeException("Couldn't delete: " + file);
+		}
+	}
+
+	protected void verify(String actual) {
+		verify("result", actual);
+	}
+
+	protected void verifyCase(String info, String actual, String testCaseName) {
+		String s = File.separator;
+		String resname = TEST_RESULTS_FOLDER + s + getTestName() + s + getTestMethodName() + s + testCaseName;
+		String filename = "src" + s + "test" + s + "resources" + s + resname;
+
+		if (ADJUST_RESULTS) {
+			synchronized (this) {
+				File testDir = new File(filename).getParentFile();
+
+				if (!testDir.exists()) {
+					if (!testDir.mkdirs()) {
+						throw new RuntimeException("Couldn't create the test result folder: " + testDir.getAbsolutePath());
+					}
+				}
+
+				FileOutputStream out;
+				try {
+					out = new FileOutputStream(filename);
+					out.write(actual.getBytes());
+					out.close();
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			}
+
+		} else {
+			byte[] bytes = loadRes(resname);
+			String expected = bytes != null ? new String(bytes) : "";
+			check(info, actual, expected);
+		}
+	}
+
+	protected void verify(String name, String actual) {
+		verifyCase(name, actual, name);
+	}
+
+	protected String[] path() {
+		return new String[]{getClass().getPackage().getName()};
 	}
 
 }

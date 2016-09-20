@@ -2,13 +2,12 @@ package org.rapidoid.html;
 
 import org.rapidoid.annotation.Authors;
 import org.rapidoid.annotation.Since;
-import org.rapidoid.var.Var;
 
 /*
  * #%L
  * rapidoid-html
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,9 +29,9 @@ public interface TagBase<TAG extends Tag> {
 
 	String tagKind();
 
-	Object content();
+	Object contents();
 
-	TAG content(Object... content);
+	TAG contents(Object... content);
 
 	TAG append(Object... content);
 
@@ -52,16 +51,16 @@ public interface TagBase<TAG extends Tag> {
 
 	TAG attr(String attr, String value);
 
+	TAG data(String dataAttr, String value);
+
+	TAG ng(String ngAttr, String value);
+
 	boolean is(String attr);
 
 	TAG is(String attr, boolean value);
 
 	Tag extra(String attr, Object value);
 
-	<T> TAG bind(Var<T> var);
-
 	TAG cmd(String cmd, Object... args);
-
-	TAG navigate(String cmd, Object... args);
 
 }

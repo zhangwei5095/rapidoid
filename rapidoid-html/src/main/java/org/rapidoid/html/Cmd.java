@@ -1,10 +1,18 @@
 package org.rapidoid.html;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.var.Var;
+
+import java.io.Serializable;
+import java.util.Arrays;
+
 /*
  * #%L
  * rapidoid-html
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,15 +28,9 @@ package org.rapidoid.html;
  * #L%
  */
 
-import java.io.Serializable;
-import java.util.Arrays;
-
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class Cmd implements Serializable {
+public class Cmd extends RapidoidThing implements Serializable {
 
 	private static final long serialVersionUID = -8114841206759431125L;
 
@@ -36,17 +38,20 @@ public class Cmd implements Serializable {
 
 	public final Object[] args;
 
-	public final boolean navigational;
-
-	public Cmd(String cmd, boolean navigational, Object[] args) {
+	public Cmd(String cmd, Object[] args) {
 		this.name = cmd;
-		this.navigational = navigational;
 		this.args = args;
+
+		for (int i = 0; i < args.length; i++) {
+			if (args[i] instanceof Var<?>) {
+				args[i] = ((Var<?>) args[i]).name();
+			}
+		}
 	}
 
 	@Override
 	public String toString() {
-		return "Cmd [name=" + name + ", args=" + Arrays.toString(args) + ", navigational=" + navigational + "]";
+		return "Cmd [name=" + name + ", args=" + Arrays.toString(args) + "]";
 	}
 
 }

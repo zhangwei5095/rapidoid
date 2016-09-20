@@ -4,7 +4,7 @@ package org.rapidoid;
  * #%L
  * rapidoid-net
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,26 +24,26 @@ import org.rapidoid.annotation.Authors;
 import org.rapidoid.annotation.Since;
 import org.rapidoid.log.Log;
 import org.rapidoid.net.Protocol;
+import org.rapidoid.net.Server;
 import org.rapidoid.net.TCP;
-import org.rapidoid.net.TCPServer;
 import org.rapidoid.test.TestCommons;
-import org.rapidoid.util.UTILS;
+import org.rapidoid.u.U;
 
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
 public abstract class NetTestCommons extends TestCommons {
 
 	protected void server(Protocol protocol, Runnable client) {
-		TCPServer server = TCP.listen(protocol);
+		Server server = TCP.server().protocol(protocol).build().start();
 
-		UTILS.sleep(300);
+		U.sleep(300);
 		System.out.println("----------------------------------------");
 
 		try {
 			client.run();
 		} finally {
 			server.shutdown();
-			UTILS.sleep(300);
+			U.sleep(300);
 			System.out.println("--- SERVER STOPPED ---");
 		}
 

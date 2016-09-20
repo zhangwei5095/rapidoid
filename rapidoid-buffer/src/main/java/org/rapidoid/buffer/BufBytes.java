@@ -1,10 +1,15 @@
 package org.rapidoid.buffer;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.bytes.Bytes;
+
 /*
  * #%L
  * rapidoid-buffer
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +25,9 @@ package org.rapidoid.buffer;
  * #L%
  */
 
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.bytes.Bytes;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class BufBytes implements Bytes {
+public class BufBytes extends RapidoidThing implements Bytes {
 
 	private final Buf buf;
 

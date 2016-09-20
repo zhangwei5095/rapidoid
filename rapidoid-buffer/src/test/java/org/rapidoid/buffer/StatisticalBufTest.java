@@ -4,7 +4,7 @@ package org.rapidoid.buffer;
  * #%L
  * rapidoid-buffer
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,10 @@ package org.rapidoid.buffer;
  * #L%
  */
 
+import org.junit.Test;
 import org.rapidoid.annotation.Authors;
 import org.rapidoid.annotation.Since;
-import org.rapidoid.util.U;
-import org.testng.annotations.Test;
+import org.rapidoid.commons.Err;
 
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
@@ -45,28 +45,28 @@ public class StatisticalBufTest extends BufferTestCommons {
 				int len = rnd(Math.min(17, copy.length() + 1));
 
 				switch (rnd(3)) {
-				case 0:
-					copy = copy.substring(len);
-					buf.deleteBefore(len);
-					break;
+					case 0:
+						copy = copy.substring(len);
+						buf.deleteBefore(len);
+						break;
 
-				case 1:
-					copy = copy.substring(0, copy.length() - len);
-					buf.deleteLast(len);
-					break;
+					case 1:
+						copy = copy.substring(0, copy.length() - len);
+						buf.deleteLast(len);
+						break;
 
-				case 2:
-					s = rndStr(0, len);
-					int maxPos = copy.length() - s.length();
-					assert maxPos >= 0;
-					int pos = rnd(maxPos + 1); // range [0..maxPos]
+					case 2:
+						s = rndStr(0, len);
+						int maxPos = copy.length() - s.length();
+						assert maxPos >= 0;
+						int pos = rnd(maxPos + 1); // range [0..maxPos]
 
-					copy = copy.substring(0, pos) + s + copy.substring(pos + s.length());
-					buf.put(pos, s.getBytes(), 0, s.length());
-					break;
+						copy = copy.substring(0, pos) + s + copy.substring(pos + s.length());
+						buf.put(pos, s.getBytes(), 0, s.length());
+						break;
 
-				default:
-					throw U.notExpected();
+					default:
+						throw Err.notExpected();
 				}
 			}
 

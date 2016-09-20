@@ -1,5 +1,6 @@
 package org.rapidoid.oauth;
 
+import org.rapidoid.RapidoidThing;
 import org.rapidoid.annotation.Authors;
 import org.rapidoid.annotation.Since;
 
@@ -7,7 +8,7 @@ import org.rapidoid.annotation.Since;
  * #%L
  * rapidoid-oauth
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,27 +26,27 @@ import org.rapidoid.annotation.Since;
 
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class OAuthProvider {
+public class OAuthProvider extends RapidoidThing {
 
 	public static OAuthProvider GOOGLE = new OAuthProvider("Google", "https://accounts.google.com/o/oauth2/auth",
-			"https://accounts.google.com/o/oauth2/token", "https://www.googleapis.com/oauth2/v1/userinfo", "profile",
-			"email");
+		"https://accounts.google.com/o/oauth2/token", "https://www.googleapis.com/oauth2/v1/userinfo", "profile",
+		"email");
 
 	public static OAuthProvider FACEBOOK = new OAuthProvider("Facebook", "https://graph.facebook.com/oauth/authorize",
-			"https://graph.facebook.com/oauth/access_token", "https://graph.facebook.com/me", "public_profile", "email");
+		"https://graph.facebook.com/oauth/access_token", "https://graph.facebook.com/me", "public_profile", "email");
 
 	public static OAuthProvider LINKEDIN = new OAuthProvider(
-			"LinkedIn",
-			"https://www.linkedin.com/uas/oauth2/authorization",
-			"https://www.linkedin.com/uas/oauth2/accessToken",
-			"https://api.linkedin.com/v1/people/~:(id,first-name,last-name,maiden-name,email-address)?format=json&oauth2_access_token={{token}}",
-			"r_basicprofile", "r_emailaddress");
+		"LinkedIn",
+		"https://www.linkedin.com/uas/oauth2/authorization",
+		"https://www.linkedin.com/uas/oauth2/accessToken",
+		"https://api.linkedin.com/v1/people/~:(id,first-name,last-name,maiden-name,email-address)?format=json&oauth2_access_token={{token}}",
+		"r_basicprofile", "r_emailaddress");
 
 	public static OAuthProvider GITHUB = new OAuthProvider("GitHub", "https://github.com/login/oauth/authorize",
-			"https://github.com/login/oauth/access_token", "https://api.github.com/user", "" /* no scope */,
-			"user:email");
+		"https://github.com/login/oauth/access_token", "https://api.github.com/user", "" /* no scope */,
+		"user:email");
 
-	public static final OAuthProvider[] PROVIDERS = { GOOGLE, FACEBOOK, LINKEDIN, GITHUB };
+	public static final OAuthProvider[] PROVIDERS = {GOOGLE, FACEBOOK, LINKEDIN, GITHUB};
 
 	private final String name;
 
@@ -60,7 +61,7 @@ public class OAuthProvider {
 	private final String emailScope;
 
 	public OAuthProvider(String name, String authEndpoint, String tokenEndpoint, String profileEndpoint,
-			String profileScope, String emailScope) {
+	                     String profileScope, String emailScope) {
 		this.name = name;
 		this.authEndpoint = authEndpoint;
 		this.tokenEndpoint = tokenEndpoint;

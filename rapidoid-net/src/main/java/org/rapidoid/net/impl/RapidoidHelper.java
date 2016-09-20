@@ -1,10 +1,23 @@
 package org.rapidoid.net.impl;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.cls.Cls;
+import org.rapidoid.data.KeyValueRanges;
+import org.rapidoid.data.BufRanges;
+import org.rapidoid.pool.Pool;
+import org.rapidoid.pool.Pools;
+import org.rapidoid.wrap.*;
+
+import java.util.Random;
+import java.util.concurrent.Callable;
+
 /*
  * #%L
  * rapidoid-net
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,46 +33,42 @@ package org.rapidoid.net.impl;
  * #L%
  */
 
-import java.util.concurrent.Callable;
-
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.data.KeyValueRanges;
-import org.rapidoid.data.Ranges;
-import org.rapidoid.pool.ArrayPool;
-import org.rapidoid.pool.Pool;
-import org.rapidoid.util.Cls;
-import org.rapidoid.wrap.BoolWrap;
-import org.rapidoid.wrap.CharWrap;
-import org.rapidoid.wrap.DoubleWrap;
-import org.rapidoid.wrap.FloatWrap;
-import org.rapidoid.wrap.IntWrap;
-import org.rapidoid.wrap.LongWrap;
-import org.rapidoid.wrap.ShortWrap;
-
 /**
- * Helpers are instantiated per worker node (for thread-safe use), so they
- * contain various data structures that can be used as temporary data holders
- * when implementing protocols, to avoid instantiating objects for each protocol
+ * Helpers are instantiated per worker node (for thread-safe use), so they contain various data structures that can be
+ * used as temporary data holders when implementing protocols, to avoid instantiating objects for each protocol
  * execution.
  */
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class RapidoidHelper {
+public class RapidoidHelper extends RapidoidThing {
+
+	public final Random RND = new Random();
 
 	public final byte[] bytes = new byte[100 * 1024];
 
+	public final byte[] bytes128 = new byte[128];
+
 	public final KeyValueRanges pairs = new KeyValueRanges(100);
 
-	public final Ranges ranges1 = new Ranges(100);
+	public final KeyValueRanges pairs1 = new KeyValueRanges(100);
 
-	public final Ranges ranges2 = new Ranges(100);
+	public final KeyValueRanges pairs2 = new KeyValueRanges(100);
 
-	public final Ranges ranges3 = new Ranges(100);
+	public final KeyValueRanges pairs3 = new KeyValueRanges(100);
 
-	public final Ranges ranges4 = new Ranges(100);
+	public final KeyValueRanges pairs4 = new KeyValueRanges(100);
 
-	public final Ranges ranges5 = new Ranges(100);
+	public final KeyValueRanges pairs5 = new KeyValueRanges(100);
+
+	public final BufRanges ranges1 = new BufRanges(100);
+
+	public final BufRanges ranges2 = new BufRanges(100);
+
+	public final BufRanges ranges3 = new BufRanges(100);
+
+	public final BufRanges ranges4 = new BufRanges(100);
+
+	public final BufRanges ranges5 = new BufRanges(100);
 
 	public final BoolWrap[] booleans = new BoolWrap[100];
 
@@ -75,6 +84,10 @@ public class RapidoidHelper {
 
 	public final DoubleWrap[] doubles = new DoubleWrap[100];
 
+	public long requestIdGen = 0;
+
+	public long requestCounter = 0;
+
 	public final Pool<?> pool;
 
 	public final Object exchange;
@@ -83,7 +96,7 @@ public class RapidoidHelper {
 		this(null);
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
+	@SuppressWarnings({"rawtypes", "unchecked"})
 	public RapidoidHelper(final Class<?> exchangeClass) {
 
 		for (int i = 0; i < booleans.length; i++) {
@@ -116,7 +129,7 @@ public class RapidoidHelper {
 
 		if (exchangeClass != null) {
 			exchange = Cls.newInstance(exchangeClass);
-			pool = new ArrayPool(new Callable() {
+			pool = Pools.create("exchanges", new Callable() {
 				@Override
 				public Object call() throws Exception {
 					return Cls.newInstance(exchangeClass);

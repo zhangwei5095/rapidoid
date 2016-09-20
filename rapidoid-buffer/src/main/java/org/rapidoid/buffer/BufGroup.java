@@ -1,10 +1,19 @@
 package org.rapidoid.buffer;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.pool.Pool;
+import org.rapidoid.pool.Pools;
+
+import java.nio.ByteBuffer;
+import java.util.concurrent.Callable;
+
 /*
  * #%L
  * rapidoid-buffer
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,17 +29,9 @@ package org.rapidoid.buffer;
  * #L%
  */
 
-import java.nio.ByteBuffer;
-import java.util.concurrent.Callable;
-
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.pool.ArrayPool;
-import org.rapidoid.pool.Pool;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class BufGroup {
+public class BufGroup extends RapidoidThing {
 
 	private final int factor;
 
@@ -38,11 +39,14 @@ public class BufGroup {
 
 	private final Pool<ByteBuffer> pool;
 
-	public BufGroup(int factor) {
+	private final boolean synchronizedBuffers;
+
+	public BufGroup(int factor, boolean synchronizedBuffers) {
+		this.synchronizedBuffers = synchronizedBuffers;
 		this.factor = factor;
 		this.capacity = (int) Math.pow(2, factor);
 
-		pool = new ArrayPool<ByteBuffer>(new Callable<ByteBuffer>() {
+		pool = Pools.create("buffers", new Callable<ByteBuffer>() {
 			@Override
 			public ByteBuffer call() {
 				return ByteBuffer.allocateDirect(capacity);
@@ -50,8 +54,18 @@ public class BufGroup {
 		}, 1000);
 	}
 
+	public BufGroup(int factor) {
+		this(factor, true);
+	}
+
 	public Buf newBuf(String name) {
-		return new MultiBuf(pool, factor, name);
+		Buf buf = new MultiBuf(pool, factor, name);
+
+		if (synchronizedBuffers) {
+			buf = new SynchronizedBuf(buf);
+		}
+
+		return buf;
 	}
 
 	public Buf newBuf() {
@@ -69,7 +83,11 @@ public class BufGroup {
 	}
 
 	public int instances() {
-		return pool.instances();
+		return pool.objectsCreated();
+	}
+
+	public void clear() {
+		pool.clear();
 	}
 
 }

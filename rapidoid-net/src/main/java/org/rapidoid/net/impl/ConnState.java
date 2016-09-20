@@ -1,10 +1,17 @@
 package org.rapidoid.net.impl;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.util.Resetable;
+
+import java.util.List;
+
 /*
  * #%L
  * rapidoid-net
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,21 +27,36 @@ package org.rapidoid.net.impl;
  * #L%
  */
 
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.util.Resetable;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class ConnState implements Resetable {
+public class ConnState extends RapidoidThing implements Resetable {
 
-	public long n;
+	public volatile long n;
 
-	public Object obj;
+	public volatile Object obj;
+
+	/* COMMENTED OUT FOR PRODUCTION (the log is used for debugging during development): */
+
+	// private final List<String> log = Collections.synchronizedList(U.<String> list());
 
 	public void reset() {
 		n = 0;
 		obj = null;
+		log("<<< RESET >>>");
+	}
+
+	/* The log is used for debugging during development. */
+	public void log(String msg) {
+		/* COMMENTED OUT FOR PRODUCTION: */
+		// log.add(msg);
+	}
+
+	/* The log is used for debugging during development. */
+	public List<String> log() {
+		return null;
+
+		/* COMMENTED OUT FOR PRODUCTION: */
+		// return log;
 	}
 
 }

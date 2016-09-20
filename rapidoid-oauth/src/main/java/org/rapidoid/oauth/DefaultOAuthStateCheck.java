@@ -1,16 +1,19 @@
 package org.rapidoid.oauth;
 
+import org.rapidoid.RapidoidThing;
 import org.rapidoid.annotation.Authors;
 import org.rapidoid.annotation.Since;
+import org.rapidoid.commons.Rnd;
 import org.rapidoid.config.Conf;
-import org.rapidoid.util.Rnd;
-import org.rapidoid.util.UTILS;
+import org.rapidoid.config.Config;
+import org.rapidoid.crypto.Crypto;
+import org.rapidoid.value.Value;
 
 /*
  * #%L
  * rapidoid-oauth
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,22 +31,24 @@ import org.rapidoid.util.UTILS;
 
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class DefaultOAuthStateCheck implements OAuthStateCheck {
+public class DefaultOAuthStateCheck extends RapidoidThing implements OAuthStateCheck {
+
+	private static final Config OAUTH = Conf.OAUTH;
 
 	@Override
-	public String generateState(String clientSecret, String sessionId) {
-		if (Conf.is("oauth-no-state")) {
+	public String generateState(Value<String> clientSecret, String sessionId) {
+		if (OAUTH.is("stateless")) {
 			return "OK";
 		}
 
 		String rnd = Rnd.rndStr(10);
-		String hash = UTILS.md5(clientSecret + rnd);
+		String hash = Crypto.sha512(clientSecret.get() + rnd);
 		return rnd + "_" + hash;
 	}
 
 	@Override
 	public boolean isValidState(String state, String clientSecret, String sessionId) {
-		if (Conf.is("oauth-no-state")) {
+		if (OAUTH.is("stateless")) {
 			return state.equals("OK");
 		}
 
@@ -52,7 +57,7 @@ public class DefaultOAuthStateCheck implements OAuthStateCheck {
 			return false;
 		}
 
-		String hash = UTILS.md5(clientSecret + parts[0]);
+		String hash = Crypto.sha512(clientSecret + parts[0]);
 		return parts[1].equals(hash);
 	}
 

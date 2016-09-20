@@ -1,10 +1,17 @@
 package org.rapidoid.net.impl;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.buffer.BufProvider;
+import org.rapidoid.data.Data;
+import org.rapidoid.data.BufRange;
+
 /*
  * #%L
  * rapidoid-net
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,38 +27,43 @@ package org.rapidoid.net.impl;
  * #L%
  */
 
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.buffer.BufProvider;
-import org.rapidoid.data.Data;
-import org.rapidoid.data.Range;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class DefaultData implements Data {
+public class DefaultData extends RapidoidThing implements Data {
 
 	private final BufProvider src;
 
-	private final Range range;
+	private final BufRange range;
 
-	public DefaultData(BufProvider src, Range range) {
+	private String value;
+
+	public DefaultData(BufProvider src, BufRange range) {
 		this.src = src;
 		this.range = range;
 	}
 
 	@Override
-	public String get() {
-		return !range.isEmpty() ? src.buffer().get(range) : "";
+	public synchronized String get() {
+		if (value == null) {
+			value = !range.isEmpty() ? src.buffer().get(range) : "";
+		}
+
+		return value;
 	}
 
 	@Override
-	public Range range() {
+	public BufRange range() {
 		return range;
 	}
 
 	@Override
 	public String toString() {
 		return "Data [range=" + range + "]";
+	}
+
+	@Override
+	public synchronized void reset() {
+		value = null;
 	}
 
 }

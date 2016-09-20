@@ -4,7 +4,7 @@ package org.rapidoid.oauth;
  * #%L
  * rapidoid-oauth
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,31 +22,45 @@ package org.rapidoid.oauth;
 
 import org.apache.oltu.oauth2.client.request.OAuthClientRequest;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.rapidoid.RapidoidThing;
 import org.rapidoid.annotation.Authors;
 import org.rapidoid.annotation.Since;
 import org.rapidoid.config.Conf;
-import org.rapidoid.http.HTMLSnippets;
-import org.rapidoid.http.HTTPServer;
-import org.rapidoid.http.Handler;
-import org.rapidoid.http.HttpExchange;
-import org.rapidoid.util.U;
+import org.rapidoid.config.Config;
+import org.rapidoid.gui.GUI;
+import org.rapidoid.http.HttpUtils;
+import org.rapidoid.http.Req;
+import org.rapidoid.http.ReqHandler;
+import org.rapidoid.log.Log;
+import org.rapidoid.setup.Setup;
+import org.rapidoid.u.U;
+import org.rapidoid.value.Value;
 
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class OAuth {
+public class OAuth extends RapidoidThing {
 
 	private static final String LOGIN_BTN = "<div class=\"row-fluid\"><div class=\"col-md-3\"><a href=\"/_%sLogin\" class=\"btn btn-default btn-block\">Login with %s</a></div></div>";
 
 	private static OAuthStateCheck STATE_CHECK;
 
-	public static void register(HTTPServer server, OAuthProvider... providers) {
-		register(server, null, new DefaultOAuthStateCheck(), providers);
+	private static final Config OAUTH = Conf.OAUTH;
+
+	private static final Value<String> DOMAIN = Conf.APP.entry("domain").str();
+
+	public static void bootstrap(Setup setup) {
+		register(setup, new DefaultOAuthStateCheck());
 	}
 
-	public static void register(HTTPServer server, String oauthDomain, OAuthStateCheck stateCheck,
-			OAuthProvider... providers) {
+	public static void register(Setup setup, OAuthProvider... providers) {
+		register(setup, new DefaultOAuthStateCheck(), providers);
+	}
 
-		oauthDomain = U.or(oauthDomain, Conf.option("oauth-domain", (String) null));
+	public static void register(Setup setup, OAuthStateCheck stateCheck, OAuthProvider... providers) {
+
+		if (OAUTH.isEmpty()) {
+			Log.warn("OAuth is not configured!");
+		}
 
 		OAuth.STATE_CHECK = stateCheck;
 
@@ -63,44 +77,53 @@ public class OAuth {
 			String loginPath = "/_" + name + "Login";
 			String callbackPath = "/_" + name + "OauthCallback";
 
-			String clientId = Conf.option(name + ".clientId", "NO-CLIENT-ID");
-			String clientSecret = Conf.option(name + ".clientSecret", "NO-CLIENT-SECRET");
+			Config providerConfig = OAUTH.sub(name);
+			Value<String> clientId = providerConfig.entry("clientId").str();
+			Value<String> clientSecret = providerConfig.entry("clientSecret").str();
 
-			server.get(loginPath, new OAuthLoginHandler(provider, oauthDomain));
-			server.get(callbackPath, new OAuthTokenHandler(provider, oauthDomain, stateCheck, clientId, clientSecret,
-					callbackPath));
+			setup.get(loginPath).html(new OAuthLoginHandler(provider, DOMAIN));
+			setup.get(callbackPath).html(new OAuthTokenHandler(provider, setup.custom(), DOMAIN, stateCheck, clientId, clientSecret, callbackPath));
 
-			loginHtml.append(U.format(LOGIN_BTN, name, provider.getName()));
+			loginHtml.append(U.frmt(LOGIN_BTN, name, provider.getName()));
 		}
 
 		loginHtml.append("</div>");
+		final String loginPage = loginHtml.toString();
 
-		server.get("/_oauthLogin", new Handler() {
+		setup.get("/_oauth").mvc(new ReqHandler() {
 			@Override
-			public Object handle(HttpExchange x) throws Exception {
-				return HTMLSnippets.writePage(x, "Login with OAuth provider", loginHtml.toString());
+			public Object execute(Req x) throws Exception {
+				return GUI.hardcoded(loginPage);
 			}
 		});
 	}
 
-	public static String getLoginURL(HttpExchange x, OAuthProvider provider, String oauthDomain) {
+	public static String getLoginURL(Req req, OAuthProvider provider, String oauthDomain) {
 
-		oauthDomain = U.or(oauthDomain, Conf.option("oauth-domain", (String) null));
+		if (OAUTH.isEmpty()) {
+			Log.warn("OAuth is not configured!");
+		}
 
 		String name = provider.getName().toLowerCase();
 
-		String clientId = Conf.option(name + ".clientId", "NO-CLIENT-ID");
-		String clientSecret = Conf.option(name + ".clientSecret", "NO-CLIENT-SECRET");
+		Config providerConfig = OAUTH.sub(name);
+		Value<String> clientId = providerConfig.entry("clientId").str();
+		Value<String> clientSecret = providerConfig.entry("clientSecret").str();
 
-		String callbackPath = "/_" + name + "OauthCallback.html";
-		String redirectUrl = oauthDomain != null ? oauthDomain + callbackPath : x.constructUrl(callbackPath);
+		String callbackPath = "/_" + name + "OauthCallback";
 
-		String state = STATE_CHECK.generateState(clientSecret, x.sessionId());
+		boolean popup = req.param("popup", null) != null;
+
+		String redirectUrl = U.notEmpty(oauthDomain) ? oauthDomain + callbackPath : HttpUtils.constructUrl(req,
+			callbackPath);
+
+		String statePrefix = popup ? "P" : "N";
+		String state = statePrefix + STATE_CHECK.generateState(clientSecret, req.sessionId());
 
 		try {
 			OAuthClientRequest request = OAuthClientRequest.authorizationLocation(provider.getAuthEndpoint())
-					.setClientId(clientId).setRedirectURI(redirectUrl).setScope(provider.getEmailScope())
-					.setState(state).setResponseType("code").buildQueryMessage();
+				.setClientId(clientId.str().get()).setRedirectURI(redirectUrl).setScope(provider.getEmailScope())
+				.setState(state).setResponseType("code").buildQueryMessage();
 			return request.getLocationUri();
 		} catch (OAuthSystemException e) {
 			throw U.rte(e);

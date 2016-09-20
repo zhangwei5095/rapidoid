@@ -1,176 +1,20 @@
-Rapidoid - Simple, Powerful, Secure.
+Rapidoid - Simple. Powerful. Secure. Fast!
 ========
-
-![Rapidoid showcase](http://www.rapidoid.org/showcase.gif)
-
-# Apache License v2
-
-The software is released under the liberal Apache Public License v2, so it is free to use for both commercial and non-commercial projects.
 
 # Documentation (examples)
 
 Please visit the official site:
 
-[http://www.rapidoid.org/](http://www.rapidoid.org/#quickstart)
+[http://www.rapidoid.org/](http://www.rapidoid.org/)
 
-# Using with Maven
+# Apache License v2
 
-Add the following snippet to the `<dependencies>` section in pom.xml:
+The main distribution of the framework is released under the liberal Apache Public License v2, so it is free to use for both commercial and non-commercial projects.
 
-```xml
-<dependency>
-    <groupId>org.rapidoid</groupId>
-    <artifactId>rapidoid-all</artifactId>
-    <version>2.3.0</version>
-</dependency>
-```
+# Roadmap
 
-# Quick start
-
-* Add the `rapidoid-all` dependency to your Maven project (as described above).
-
-* Add the file App.java:
- 
-```java
-import org.rapidoid.app.Apps;
-
-public class App {
-
-	public String title = "Issue Management";
-
-	public boolean full = true;
-
-	public boolean fluid = false;
-
-	public String theme = "1";
-
-	public static void main(String[] args) {
-		Apps.run(args);
-	}
-
-}
-```
-
-* Add the file HomeScreen.java:
- 
-```java
-import org.rapidoid.app.Screen;
-import org.rapidoid.db.DB;
-
-public class HomeScreen extends Screen {
-
-	public Object content() {
-		return render("home.html", "count", DB.getAll(Issue.class).size());
-	}
-
-}
-```
-
-* Add the file Issue.java:
- 
-```java
-
-import org.rapidoid.annotation.*;
-
-@Scaffold
-@DbEntity
-public class Issue {
-
-	public long id;
-
-	public String title;
-
-	public Priority priority = Priority.MEDIUM;
-
-	@Optional
-	public String description;
-
-}
-```
-
-* Add the file Priority.java:
- 
-```java
-public enum Priority {
-	LOW, MEDIUM, HIGH;
-}
-
-```
-
-* Add the file NewIssueScreen.java:
- 
-```java
-
-import org.rapidoid.annotation.Session;
-import org.rapidoid.app.Screen;
-import org.rapidoid.db.DB;
-import org.rapidoid.html.Tag;
-import org.rapidoid.widget.FormWidget;
-
-public class NewIssueScreen extends Screen {
-
-	@Session
-	public Issue issue = new Issue();
-
-	public Object content() {
-		Tag title = h2("Add new issue").style("margin-bottom:15px");
-		FormWidget form = create(issue).buttons(SAVE, CANCEL);
-		return mid6(title, form);
-	}
-
-	public void onSave() {
-		DB.insert(issue);
-		issue = new Issue();
-	}
-
-	public void onCancel() {
-		issue = new Issue();
-	}
-
-}
-```
-
-Rapidoid will scan for `*Screen` classes on your classpath and will construct a nice and responsive GUI. It will start a fast embedded HTTP server (`rapidoid-http`).
-
-* Navigate to:
- * [http://localhost:8080/](http://localhost:8080/)
-
-# REST services
-
-* Add the MainService.java file:
- 
-```java
-import java.util.List;
-import java.util.Map;
-
-public class MainService {
-
-    public String index() {
-        return "hi!";
-    }
-
-    public String hey(String name, int age) {
-        return "Hey " + name + " (" + age + ")";
-    }
-
-    public List<String> foo(List<String> params) {
-        return params;
-    }
-
-    public Map<String, Object> bar(Map<String, Object> params) {
-        return params;
-    }
-
-}
-```
-
-Rapidoid will scan for `*Service` classes on your classpath and start a fast embedded HTTP server (`rapidoid-http`).
-
-* Navigate to:
- * [http://localhost:8080/](http://localhost:8080/) (returns `hi!`)
- * [http://localhost:8080/hey/joe/22](http://localhost:8080/hey/joe/22) (returns `Hey joe (22)`)
- * [http://localhost:8080/foo/aa/bbb/c](http://localhost:8080/foo/aa/bbb/c) (returns `["aa","bbb","c"]`)
- * [http://localhost:8080/bar?x=1&y=2](http://localhost:8080/bar?x=1&y=2) (returns `{"y":"2","x":"1"}`)
+* Better documentation
+* SSL support
 
 # Contributing
 

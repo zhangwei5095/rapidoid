@@ -1,10 +1,18 @@
 package org.rapidoid.net.impl;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.net.Protocol;
+import org.rapidoid.u.U;
+
+import java.nio.channels.SocketChannel;
+
 /*
  * #%L
  * rapidoid-net
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,21 +28,22 @@ package org.rapidoid.net.impl;
  * #L%
  */
 
-import java.nio.channels.SocketChannel;
-
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class RapidoidChannel {
+public class RapidoidChannel extends RapidoidThing {
 
 	final SocketChannel socketChannel;
 	final boolean isClient;
+	final Protocol protocol;
 
-	public RapidoidChannel(SocketChannel socketChannel, boolean isClient) {
+	public RapidoidChannel(SocketChannel socketChannel, boolean isClient, Protocol protocol) {
+
+		U.notNull(socketChannel, "socket channel");
+		U.notNull(protocol, "channel protocol");
+
 		this.socketChannel = socketChannel;
 		this.isClient = isClient;
+		this.protocol = protocol;
 	}
 
 }

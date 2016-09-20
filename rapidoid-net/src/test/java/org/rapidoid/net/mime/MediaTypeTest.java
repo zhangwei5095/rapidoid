@@ -4,7 +4,7 @@ package org.rapidoid.net.mime;
  * #%L
  * rapidoid-net
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ package org.rapidoid.net.mime;
  * #L%
  */
 
+import org.junit.Test;
 import org.rapidoid.NetTestCommons;
 import org.rapidoid.annotation.Authors;
 import org.rapidoid.annotation.Since;
-import org.rapidoid.mime.MediaType;
-import org.testng.annotations.Test;
+import org.rapidoid.http.MediaType;
 
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
@@ -44,8 +44,8 @@ public class MediaTypeTest extends NetTestCommons {
 		eq(new String(MediaType.CSS_UTF_8.getBytes()), "text/css; charset=utf-8");
 		eq(MediaType.getByFileExtension("css"), MediaType.CSS_UTF_8);
 
-		eq(new String(MediaType.JSON_UTF_8.getBytes()), "application/json; charset=utf-8");
-		eq(MediaType.getByFileExtension("json"), MediaType.JSON_UTF_8);
+		eq(new String(MediaType.JSON.getBytes()), "application/json");
+		eq(MediaType.getByFileExtension("json"), MediaType.JSON);
 
 		eq(new String(MediaType.JAVASCRIPT_UTF8.getBytes()), "application/javascript; charset=utf-8");
 		eq(MediaType.getByFileExtension("js"), MediaType.JAVASCRIPT_UTF8);
@@ -78,20 +78,20 @@ public class MediaTypeTest extends NetTestCommons {
 
 	@Test
 	public void testCustomMediaType() {
-		String[] attrss = { "abc=xy" };
+		String[] attrss = {"abc=xy"};
 		MediaType myType = MediaType.create("text/some", attrss, "some");
 
 		eq(new String(myType.getBytes()), "text/some; abc=xy");
 
 		eq(MediaType.getByFileName("abc.some"), myType);
 		eq(MediaType.getByFileName(".some"), myType);
-		eq(MediaType.getByFileName("some"), null);
-		eq(MediaType.getByFileName("someX"), null);
+		eq(MediaType.getByFileName("some"), MediaType.DEFAULT);
+		eq(MediaType.getByFileName("someX"), MediaType.DEFAULT);
 	}
 
 	@Test
 	public void testCustomMediaType2() {
-		String[] attrss = { "a=1", "b=abc" };
+		String[] attrss = {"a=1", "b=abc"};
 		MediaType myType = MediaType.create("app/my", attrss, "my1", "my2");
 
 		eq(new String(myType.getBytes()), "app/my; a=1; b=abc");

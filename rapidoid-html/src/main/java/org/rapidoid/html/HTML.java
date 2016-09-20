@@ -4,7 +4,7 @@ package org.rapidoid.html;
  * #%L
  * rapidoid-html
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,25 +22,9 @@ package org.rapidoid.html;
 
 import org.rapidoid.annotation.Authors;
 import org.rapidoid.annotation.Since;
+import org.rapidoid.commons.AnyObj;
 import org.rapidoid.html.impl.ConstantTag;
-import org.rapidoid.html.tag.ATag;
-import org.rapidoid.html.tag.ButtonTag;
-import org.rapidoid.html.tag.CanvasTag;
-import org.rapidoid.html.tag.EmbedTag;
-import org.rapidoid.html.tag.FormTag;
-import org.rapidoid.html.tag.IframeTag;
-import org.rapidoid.html.tag.ImgTag;
-import org.rapidoid.html.tag.InputTag;
-import org.rapidoid.html.tag.LinkTag;
-import org.rapidoid.html.tag.ObjectTag;
-import org.rapidoid.html.tag.OptionTag;
-import org.rapidoid.html.tag.ScriptTag;
-import org.rapidoid.html.tag.SelectTag;
-import org.rapidoid.html.tag.TableTag;
-import org.rapidoid.html.tag.TdTag;
-import org.rapidoid.html.tag.TextareaTag;
-import org.rapidoid.html.tag.ThTag;
-import org.rapidoid.util.UTILS;
+import org.rapidoid.html.tag.*;
 
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
@@ -68,12 +52,16 @@ public class HTML extends Tags {
 		return new ConstantTag(content);
 	}
 
+	public static Object multi(Object... elements) {
+		return new ElementGroup(elements);
+	}
+
 	public static ATag a_void(Object... contents) {
 		return a(contents).href("javascript:void(0);");
 	}
 
 	public static Tag ul_li(Object... listItems) {
-		listItems = UTILS.flat(listItems);
+		listItems = AnyObj.flat(listItems);
 
 		Tag list = ul();
 

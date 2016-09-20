@@ -1,10 +1,22 @@
 package org.rapidoid.data;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.buffer.Buf;
+import org.rapidoid.bytes.BytesUtil;
+import org.rapidoid.commons.Str;
+import org.rapidoid.u.U;
+import org.rapidoid.util.Msc;
+
+import java.util.List;
+import java.util.Map;
+
 /*
  * #%L
  * rapidoid-buffer
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,46 +32,39 @@ package org.rapidoid.data;
  * #L%
  */
 
-import java.util.Map;
-
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.buffer.Buf;
-import org.rapidoid.bytes.BytesUtil;
-import org.rapidoid.util.U;
-import org.rapidoid.util.UTILS;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class KeyValueRanges {
+public class KeyValueRanges extends RapidoidThing {
 
-	public final Range[] keys;
+	public final BufRange[] keys;
 
-	public final Range[] values;
+	public final BufRange[] values;
 
 	public int count;
 
 	public KeyValueRanges(int capacity) {
-		this.keys = new Range[capacity];
-		this.values = new Range[capacity];
+		this.keys = new BufRange[capacity];
+		this.values = new BufRange[capacity];
 
 		for (int i = 0; i < capacity; i++) {
-			keys[i] = new Range();
-			values[i] = new Range();
+			keys[i] = new BufRange();
+			values[i] = new BufRange();
 			keys[i].reset();
 			values[i].reset();
 		}
 	}
 
-	public void reset() {
+	public KeyValueRanges reset() {
 		for (int i = 0; i < count; i++) {
 			keys[i].reset();
 			values[i].reset();
 		}
 		count = 0;
+
+		return this;
 	}
 
-	public Range get(Buf buf, byte[] key, boolean caseSensitive) {
+	public BufRange get(Buf buf, byte[] key, boolean caseSensitive) {
 		for (int i = 0; i < count; i++) {
 			if (BytesUtil.matches(buf.bytes(), keys[i], key, caseSensitive)) {
 				return values[i];
@@ -115,24 +120,57 @@ public class KeyValueRanges {
 		return map;
 	}
 
-	public Map<String, String> toMap(Buf src, boolean urlDecodeKeys, boolean urlDecodeVals) {
-		Map<String, String> map = U.map();
-
+	public void toMap(Buf src, boolean urlDecodeKeys, boolean urlDecodeVals, boolean lowerCaseKeys, Map<String, ? super String> dest) {
 		for (int i = 0; i < count; i++) {
 			String key = keys[i].str(src.bytes());
 			String val = values[i].str(src.bytes());
 
 			if (urlDecodeKeys) {
-				key = UTILS.urlDecode(key);
+				key = Msc.urlDecodeOrKeepOriginal(key);
 			}
+
 			if (urlDecodeVals) {
-				val = UTILS.urlDecode(val);
+				val = Msc.urlDecodeOrKeepOriginal(val);
 			}
 
-			map.put(key, val);
-		}
+			if (lowerCaseKeys) {
+				key = key.toLowerCase();
+			}
 
+			dest.put(key, val);
+		}
+	}
+
+	public Map<String, String> toMap(Buf src, boolean urlDecodeKeys, boolean urlDecodeVals, boolean lowerCaseKeys) {
+		Map<String, String> map = U.map();
+		toMap(src, urlDecodeKeys, urlDecodeVals, lowerCaseKeys, map);
 		return map;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void toUrlEncodedParams(Buf src, Map<String, Object> params) {
+		for (int i = 0; i < count; i++) {
+			String key = keys[i].str(src.bytes());
+			String val = values[i].str(src.bytes());
+
+			key = Msc.urlDecodeOrKeepOriginal(key);
+			val = Msc.urlDecodeOrKeepOriginal(val);
+
+			if (key.endsWith("[]")) {
+				key = Str.sub(key, 0, -2);
+				List<String> list = (List<String>) params.get(key);
+
+				if (list == null) {
+					list = U.list();
+					params.put(key, list);
+				}
+
+				list.add(val);
+
+			} else {
+				params.put(key, val);
+			}
+		}
 	}
 
 	public Map<String, byte[]> toBinaryMap(Buf src, boolean urlDecodeKeys) {
@@ -143,7 +181,7 @@ public class KeyValueRanges {
 			byte[] val = values[i].bytes(src);
 
 			if (urlDecodeKeys) {
-				key = UTILS.urlDecode(key);
+				key = Msc.urlDecodeOrKeepOriginal(key);
 			}
 
 			map.put(key, val);

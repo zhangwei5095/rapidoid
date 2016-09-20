@@ -1,10 +1,23 @@
 package org.rapidoid.html.impl;
 
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.commons.AnyObj;
+import org.rapidoid.commons.Err;
+import org.rapidoid.html.Cmd;
+import org.rapidoid.html.Tag;
+import org.rapidoid.u.U;
+
+import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 /*
  * #%L
  * rapidoid-html
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,21 +32,6 @@ package org.rapidoid.html.impl;
  * limitations under the License.
  * #L%
  */
-
-import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.html.Cmd;
-import org.rapidoid.html.Tag;
-import org.rapidoid.html.Tags;
-import org.rapidoid.util.Cls;
-import org.rapidoid.util.U;
-import org.rapidoid.util.UTILS;
-import org.rapidoid.var.Var;
 
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
@@ -55,18 +53,16 @@ public class TagImpl extends UndefinedTag implements TagInternals, Serializable 
 
 	final Set<String> battrs = U.set();
 
-	int _h = -1;
+	String _h = null;
 
 	Tag proxy;
-
-	Var<Object> binding;
 
 	Cmd cmd;
 
 	public TagImpl(Class<?> clazz, String name, Object[] contents) {
 		this.clazz = clazz;
 		this.name = name;
-		UTILS.flatInsertInto(this.contents, APPEND, contents);
+		AnyObj.flatInsertInto(this.contents, APPEND, contents);
 	}
 
 	@Override
@@ -76,7 +72,7 @@ public class TagImpl extends UndefinedTag implements TagInternals, Serializable 
 
 	@Override
 	public String toString() {
-		throw U.notExpected();
+		throw Err.notExpected();
 	}
 
 	public void setProxy(Tag proxy) {
@@ -113,7 +109,6 @@ public class TagImpl extends UndefinedTag implements TagInternals, Serializable 
 		Tag _copy = TagProxy.create(clazz, name, contents.toArray());
 		TagImpl impl = impl(_copy);
 
-		impl.binding = binding;
 		impl._h = _h;
 		impl.cmd = cmd;
 		impl.attrs.putAll(attrs);
@@ -128,17 +123,17 @@ public class TagImpl extends UndefinedTag implements TagInternals, Serializable 
 	}
 
 	@Override
-	public Object content() {
+	public Object contents() {
 		return contents;
 	}
 
 	@Override
-	public Tag content(Object... content) {
+	public Tag contents(Object... content) {
 		Tag _copy = copy();
 		TagImpl impl = impl(_copy);
 
 		impl.contents.clear();
-		UTILS.flatInsertInto(impl.contents, APPEND, content);
+		AnyObj.flatInsertInto(impl.contents, APPEND, content);
 
 		return _copy;
 	}
@@ -148,7 +143,7 @@ public class TagImpl extends UndefinedTag implements TagInternals, Serializable 
 		Tag _copy = copy();
 		TagImpl impl = impl(_copy);
 
-		UTILS.flatInsertInto(impl.contents, 0, content);
+		AnyObj.flatInsertInto(impl.contents, 0, content);
 
 		return _copy;
 	}
@@ -158,16 +153,13 @@ public class TagImpl extends UndefinedTag implements TagInternals, Serializable 
 		Tag _copy = copy();
 		TagImpl impl = impl(_copy);
 
-		UTILS.flatInsertInto(impl.contents, APPEND, content);
+		AnyObj.flatInsertInto(impl.contents, APPEND, content);
 
 		return _copy;
 	}
 
 	@Override
 	public String attr(String attr) {
-		if (attr.equals("value") && binding != null) {
-			return Cls.str(binding.get());
-		}
 		return attrs.get(attr);
 	}
 
@@ -179,6 +171,16 @@ public class TagImpl extends UndefinedTag implements TagInternals, Serializable 
 		impl.attrs.put(attr, value);
 
 		return _copy;
+	}
+
+	@Override
+	public Tag data(String dataAttr, String value) {
+		return attr("data-" + dataAttr, value);
+	}
+
+	@Override
+	public Tag ng(String ngAttr, String value) {
+		return attr("ng-" + ngAttr, value);
 	}
 
 	@Override
@@ -210,19 +212,8 @@ public class TagImpl extends UndefinedTag implements TagInternals, Serializable 
 		return _copy;
 	}
 
-	public int hnd() {
+	public String hnd() {
 		return _h;
-	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	public <T> Tag bind(Var<T> var) {
-		Tag _copy = (Tag) Tags.withValue(proxy, var.get());
-		TagImpl impl = impl(_copy);
-
-		impl.binding = (Var<Object>) var;
-
-		return _copy;
 	}
 
 	@Override
@@ -230,17 +221,7 @@ public class TagImpl extends UndefinedTag implements TagInternals, Serializable 
 		Tag _copy = copy();
 		TagImpl impl = impl(_copy);
 
-		impl.cmd = cmd != null ? new Cmd(cmd, false, args) : null;
-
-		return _copy;
-	}
-
-	@Override
-	public Tag navigate(String cmd, Object... args) {
-		Tag _copy = copy();
-		TagImpl impl = impl(_copy);
-
-		impl.cmd = cmd != null ? new Cmd(cmd, true, args) : null;
+		impl.cmd = cmd != null ? new Cmd(cmd, args) : null;
 
 		return _copy;
 	}

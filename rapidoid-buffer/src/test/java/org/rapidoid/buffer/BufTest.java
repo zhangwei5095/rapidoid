@@ -4,7 +4,7 @@ package org.rapidoid.buffer;
  * #%L
  * rapidoid-buffer
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,15 +20,16 @@ package org.rapidoid.buffer;
  * #L%
  */
 
+import org.junit.Test;
 import org.rapidoid.annotation.Authors;
 import org.rapidoid.annotation.Since;
 import org.rapidoid.bytes.BytesUtil;
-import org.rapidoid.data.Range;
-import org.rapidoid.data.Ranges;
+import org.rapidoid.commons.Rnd;
+import org.rapidoid.commons.Str;
+import org.rapidoid.data.BufRange;
+import org.rapidoid.data.BufRanges;
+import org.rapidoid.u.U;
 import org.rapidoid.util.Constants;
-import org.rapidoid.util.Rnd;
-import org.rapidoid.util.U;
-import org.testng.annotations.Test;
 
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
@@ -157,14 +158,16 @@ public class BufTest extends BufferTestCommons implements Constants {
 	public void shouldParseNumbers() {
 		BufGroup bufs = new BufGroup(2);
 		Buf buf = bufs.newBuf();
-		buf.append("5a1234567890fg-3450fg0x45g-3");
 
-		eq(buf.getN(new Range(0, 1)), 5);
-		eq(buf.getN(new Range(2, 10)), 1234567890);
-		eq(buf.getN(new Range(14, 5)), -3450);
-		eq(buf.getN(new Range(21, 1)), 0);
-		eq(buf.getN(new Range(23, 2)), 45);
-		eq(buf.getN(new Range(26, 2)), -3);
+		buf.append("5a1234567890fg-3450fg0x45g-3");
+		buf.setReadOnly(true);
+
+		eq(buf.getN(new BufRange(0, 1)), 5);
+		eq(buf.getN(new BufRange(2, 10)), 1234567890);
+		eq(buf.getN(new BufRange(14, 5)), -3450);
+		eq(buf.getN(new BufRange(21, 1)), 0);
+		eq(buf.getN(new BufRange(23, 2)), 45);
+		eq(buf.getN(new BufRange(26, 2)), -3);
 	}
 
 	@Test
@@ -175,6 +178,7 @@ public class BufTest extends BufferTestCommons implements Constants {
 		/************* 0123456789012345678901234567890 */
 		// buf.append("-abc-xAaw-54-bAr--The-End-");
 		buf.append("-abc-xaaw-54-bar--the-end-");
+		buf.setReadOnly(true);
 
 		int max = buf.size();
 
@@ -200,11 +204,12 @@ public class BufTest extends BufferTestCommons implements Constants {
 		Buf buf = bufs.newBuf();
 
 		buf.append("first second  third\r\na b c\r\n");
+		buf.setReadOnly(true);
 
 		buf.position(0);
 		buf.limit(buf.size());
 
-		Range range = new Range();
+		BufRange range = new BufRange();
 
 		buf.scanUntil(SPACE, range);
 		eq(buf.get(range), "first");
@@ -236,11 +241,12 @@ public class BufTest extends BufferTestCommons implements Constants {
 		Buf buf = bufs.newBuf();
 
 		buf.append("abc:  xy:");
+		buf.setReadOnly(true);
 
 		buf.position(0);
 		buf.limit(buf.size());
 
-		Range range = new Range();
+		BufRange range = new BufRange();
 
 		buf.scanUntil(COL, range);
 		eq(buf.get(range), "abc");
@@ -261,7 +267,7 @@ public class BufTest extends BufferTestCommons implements Constants {
 	@Test
 	public void testScanUntilAndMatchPrefix() {
 		final int NO_PREFIX = 0;
-		Range range = new Range();
+		BufRange range = new BufRange();
 
 		eq(BytesUtil.scanUntilAndMatchPrefix(BytesUtil.from("\n"), range, LF, 0, 0, NO_PREFIX), 1);
 		eq(range, 0, 0);
@@ -276,7 +282,7 @@ public class BufTest extends BufferTestCommons implements Constants {
 		eq(range, 0, 2);
 
 		for (int i = 0; i < 10; i++) {
-			String s = U.copyNtimes("a", i);
+			String s = Str.mul("a", i);
 
 			eq(BytesUtil.scanUntilAndMatchPrefix(BytesUtil.from(s + ":"), range, COL, 0, i, NO_PREFIX), i + 1);
 			eq(range, 0, i);
@@ -307,13 +313,14 @@ public class BufTest extends BufferTestCommons implements Constants {
 
 			String s = "GET /hi H\naa: bb\nxyz\r\n\r\n";
 			buf.append(s);
+			buf.setReadOnly(true);
 
 			buf.position(0);
 			buf.limit(buf.size());
 
-			Range verb = new Range();
-			Range uri = new Range();
-			Range protocol = new Range();
+			BufRange verb = new BufRange();
+			BufRange uri = new BufRange();
+			BufRange protocol = new BufRange();
 
 			buf.scanUntil(SPACE, verb);
 			eq(s, verb, "GET");
@@ -324,7 +331,7 @@ public class BufTest extends BufferTestCommons implements Constants {
 			buf.scanLn(protocol);
 			eq(s, protocol, "H");
 
-			Ranges headers = new Ranges(10);
+			BufRanges headers = new BufRanges(10);
 			buf.scanLnLn(headers.reset());
 
 			eq(headers.count, 2);
@@ -344,26 +351,40 @@ public class BufTest extends BufferTestCommons implements Constants {
 			int n = U.num(num.substring(0, dig));
 
 			Buf buf = bufs.newBuf();
-			buf.append(U.copyNtimes(" ", dig + 2));
+			buf.append(Str.mul(" ", dig + 2));
 			buf.putNumAsText(1, n, true);
 			eq(buf.asText(), " " + n + " ");
 
 			Buf buf2 = bufs.newBuf();
-			buf2.append(U.copyNtimes(" ", dig + 3));
+			buf2.append(Str.mul(" ", dig + 3));
 			buf2.putNumAsText(1, -n, true);
 			eq(buf2.asText(), " " + (-n) + " ");
 
 			Buf buf3 = bufs.newBuf();
-			buf3.append(U.copyNtimes(" ", dig + 2));
+			buf3.append(Str.mul(" ", dig + 2));
 			buf3.putNumAsText(dig, n, false);
 			eq(buf3.asText(), " " + n + " ");
 
 			Buf buf4 = bufs.newBuf();
-			buf4.append(U.copyNtimes(" ", dig + 3));
+			buf4.append(Str.mul(" ", dig + 3));
 			buf4.putNumAsText(dig + 1, -n, false);
 			eq(buf4.asText(), " " + (-n) + " ");
-		}
 
+			Buf buf5 = bufs.newBuf();
+			buf5.append(" ");
+			buf5.putNumAsText(1, n, true);
+			eq(buf5.asText(), " " + n);
+
+			Buf buf6 = bufs.newBuf();
+			buf6.append(Str.mul(" ", 20));
+			buf6.putNumAsText(15, n, false);
+			eq(buf6.asText(), Str.mul(" ", 16 - dig) + n + Str.mul(" ", 4));
+
+			Buf buf7 = bufs.newBuf();
+			buf7.append(Str.mul(" ", 20));
+			buf7.putNumAsText(5, n, true);
+			eq(buf7.asText(), Str.mul(" ", 5) + n + Str.mul(" ", 15 - dig));
+		}
 	}
 
 	@Test
@@ -377,7 +398,7 @@ public class BufTest extends BufferTestCommons implements Constants {
 
 			for (int j = 0; j < 5; j++) {
 				size += add;
-				buf.append(U.copyNtimes(" ", add));
+				buf.append(Str.mul(" ", add));
 				eq(buf.size(), size);
 			}
 

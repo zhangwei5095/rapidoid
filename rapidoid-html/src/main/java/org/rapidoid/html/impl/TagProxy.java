@@ -1,10 +1,26 @@
 package org.rapidoid.html.impl;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.annotation.Special;
+import org.rapidoid.cls.Cls;
+import org.rapidoid.cls.Proxies;
+import org.rapidoid.commons.Str;
+import org.rapidoid.html.SpecificTag;
+import org.rapidoid.html.Tag;
+import org.rapidoid.html.TagBase;
+import org.rapidoid.u.U;
+
+import java.io.Serializable;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+
 /*
  * #%L
  * rapidoid-html
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,29 +36,16 @@ package org.rapidoid.html.impl;
  * #L%
  */
 
-import java.io.Serializable;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.annotation.Special;
-import org.rapidoid.html.SpecificTag;
-import org.rapidoid.html.Tag;
-import org.rapidoid.html.TagBase;
-import org.rapidoid.util.Cls;
-import org.rapidoid.util.U;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class TagProxy implements InvocationHandler, Serializable {
+public class TagProxy extends RapidoidThing implements InvocationHandler, Serializable {
 
 	private static final long serialVersionUID = 8876053750757191711L;
 
 	public static <TAG extends Tag> TAG create(Class<?> tagInterface, String tagName, Object[] contents) {
 		TagImpl tag = new TagImpl(tagInterface, tagName, contents);
 
-		TAG proxy = Cls.createProxy(new TagProxy(tag, tagInterface), tagInterface, TagInternals.class);
+		TAG proxy = Proxies.createProxy(new TagProxy(tag, tagInterface), tagInterface, TagInternals.class);
 		tag.setProxy(proxy);
 
 		return proxy;
@@ -65,8 +68,16 @@ public class TagProxy implements InvocationHandler, Serializable {
 		Class<?> ret = method.getReturnType();
 		Class<?>[] paramTypes = method.getParameterTypes();
 
+		if (methodClass.equals(Object.class)) {
+			if (name.equals("toString")) {
+				return TagRenderer.get().toHTML(tag, null);
+			} else if (name.equals("equals")) {
+				return target == args[0];
+			}
+		}
+
 		if (methodClass.equals(Object.class) || methodClass.equals(TagBase.class)
-				|| methodClass.equals(TagInternals.class)) {
+			|| methodClass.equals(TagInternals.class)) {
 			return method.invoke(tag, args);
 		}
 
@@ -114,7 +125,7 @@ public class TagProxy implements InvocationHandler, Serializable {
 	}
 
 	private static String attr(String name) {
-		return name.endsWith("_") ? U.mid(name, 0, -1) : name;
+		return name.endsWith("_") ? Str.sub(name, 0, -1) : name;
 	}
 
 }

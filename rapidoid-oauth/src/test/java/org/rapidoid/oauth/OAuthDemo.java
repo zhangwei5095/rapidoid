@@ -1,10 +1,16 @@
 package org.rapidoid.oauth;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.setup.On;
+import org.rapidoid.setup.Setup;
+
 /*
  * #%L
  * rapidoid-oauth
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,22 +26,14 @@ package org.rapidoid.oauth;
  * #L%
  */
 
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.http.HTTP;
-import org.rapidoid.http.HTTPServer;
-import org.rapidoid.log.Log;
-import org.rapidoid.log.LogLevel;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class OAuthDemo {
+public class OAuthDemo extends RapidoidThing {
 
 	public static void main(String[] args) {
-		Log.setLogLevel(LogLevel.DEBUG);
-		HTTPServer server = HTTP.server().build();
-		OAuth.register(server);
-		server.start();
+		Setup setup = On.setup();
+		OAuth.register(setup);
+		setup.listen();
 	}
 
 }

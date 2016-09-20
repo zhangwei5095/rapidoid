@@ -1,10 +1,27 @@
 package org.rapidoid.net.impl;
 
+import org.rapidoid.RapidoidThing;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.buffer.Buf;
+import org.rapidoid.buffer.BufProvider;
+import org.rapidoid.data.*;
+import org.rapidoid.net.abstracts.Channel;
+import org.rapidoid.net.abstracts.ProtocolContext;
+import org.rapidoid.u.U;
+import org.rapidoid.util.Constants;
+import org.rapidoid.util.Resetable;
+
+import java.io.File;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicLong;
+
 /*
  * #%L
  * rapidoid-net
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,42 +37,26 @@ package org.rapidoid.net.impl;
  * #L%
  */
 
-import java.io.File;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicLong;
-
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.buffer.Buf;
-import org.rapidoid.buffer.BufProvider;
-import org.rapidoid.data.BinaryMultiData;
-import org.rapidoid.data.Data;
-import org.rapidoid.data.KeyValueRanges;
-import org.rapidoid.data.MultiData;
-import org.rapidoid.data.Range;
-import org.rapidoid.net.abstracts.Channel;
-import org.rapidoid.net.abstracts.CtxFull;
-import org.rapidoid.util.Constants;
-import org.rapidoid.util.Resetable;
-import org.rapidoid.util.U;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public abstract class DefaultExchange<T, W> implements CtxFull<T, W>, BufProvider, Resetable, Constants {
+public abstract class DefaultExchange<T> extends RapidoidThing implements ProtocolContext<T>, BufProvider, Resetable, Constants {
 
 	protected Channel conn;
 
 	protected AtomicLong totalWritten = new AtomicLong();
 
+	protected long requestId = 0;
+
 	@Override
 	public synchronized void reset() {
-		conn = null;
-		totalWritten.set(0);
+		this.conn = null;
+		this.totalWritten.set(0);
+		this.requestId = 0;
 	}
 
-	public void setConnection(Channel conn) {
+	public synchronized void setConnection(Channel conn) {
 		this.conn = conn;
+		this.requestId = conn.requestId();
 	}
 
 	@Override
@@ -64,14 +65,14 @@ public abstract class DefaultExchange<T, W> implements CtxFull<T, W>, BufProvide
 	}
 
 	@Override
-	public W write(String s) {
+	public T write(String s) {
 		byte[] bytes = s.getBytes();
 		conn.write(bytes);
 		return wrote(bytes.length);
 	}
 
 	@Override
-	public W writeln(String s) {
+	public T writeln(String s) {
 		byte[] bytes = s.getBytes();
 		conn.write(bytes);
 		conn.write(CR_LF);
@@ -79,26 +80,26 @@ public abstract class DefaultExchange<T, W> implements CtxFull<T, W>, BufProvide
 	}
 
 	@Override
-	public W write(byte[] bytes) {
+	public T write(byte[] bytes) {
 		conn.write(bytes);
 		return wrote(bytes.length);
 	}
 
 	@Override
-	public W write(byte[] bytes, int offset, int length) {
+	public T write(byte[] bytes, int offset, int length) {
 		conn.write(bytes, offset, length);
 		return wrote(length);
 	}
 
 	@Override
-	public W write(ByteBuffer buf) {
+	public T write(ByteBuffer buf) {
 		int n = buf.remaining();
 		conn.write(buf);
 		return wrote(n);
 	}
 
 	@Override
-	public W write(File file) {
+	public T write(File file) {
 		long size = file.length();
 		U.must(size < Integer.MAX_VALUE);
 		conn.write(file);
@@ -106,26 +107,26 @@ public abstract class DefaultExchange<T, W> implements CtxFull<T, W>, BufProvide
 	}
 
 	@Override
-	public W writeJSON(Object value) {
+	public T writeJSON(Object value) {
 		conn.writeJSON(value);
-		return meW();
+		return me();
 	}
 
-	private W wrote(int count) {
+	private T wrote(int count) {
 		totalWritten.addAndGet(count);
-		return meW();
+		return me();
 	}
 
 	@Override
 	public T close() {
 		conn.close();
-		return meT();
+		return me();
 	}
 
 	@Override
 	public T closeIf(boolean condition) {
 		conn.closeIf(condition);
-		return meT();
+		return me();
 	}
 
 	@Override
@@ -163,11 +164,11 @@ public abstract class DefaultExchange<T, W> implements CtxFull<T, W>, BufProvide
 		return conn.connId();
 	}
 
-	protected Data data(Range range) {
+	protected Data data(BufRange range) {
 		return new DefaultData(this, range);
 	}
 
-	protected Data decodedData(Range range) {
+	protected Data decodedData(BufRange range) {
 		return new DecodedData(this, range);
 	}
 
@@ -189,15 +190,9 @@ public abstract class DefaultExchange<T, W> implements CtxFull<T, W>, BufProvide
 	}
 
 	@Override
-	public T restart() {
-		conn.restart();
-		return meT();
-	}
-
-	@Override
-	public W async() {
+	public T async() {
 		conn.async();
-		return meW();
+		return me();
 	}
 
 	@Override
@@ -206,19 +201,19 @@ public abstract class DefaultExchange<T, W> implements CtxFull<T, W>, BufProvide
 	}
 
 	@Override
-	public W done() {
+	public T done() {
 		conn.done();
-		return meW();
+		return me();
 	}
 
 	@SuppressWarnings("unchecked")
-	protected T meT() {
+	protected T me() {
 		return (T) this;
 	}
 
-	@SuppressWarnings("unchecked")
-	protected W meW() {
-		return (W) this;
+	@Override
+	public long requestId() {
+		return requestId;
 	}
 
 }

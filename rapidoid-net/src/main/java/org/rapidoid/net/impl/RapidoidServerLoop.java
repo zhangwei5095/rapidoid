@@ -1,10 +1,29 @@
 package org.rapidoid.net.impl;
 
+import org.rapidoid.activity.RapidoidThread;
+import org.rapidoid.annotation.Authors;
+import org.rapidoid.annotation.Since;
+import org.rapidoid.commons.Env;
+import org.rapidoid.commons.Rnd;
+import org.rapidoid.config.ConfigUtil;
+import org.rapidoid.log.Log;
+import org.rapidoid.net.Protocol;
+import org.rapidoid.net.Server;
+import org.rapidoid.net.TCPServerInfo;
+import org.rapidoid.u.U;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.nio.channels.*;
+import java.util.Iterator;
+import java.util.Set;
+
 /*
  * #%L
  * rapidoid-net
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,83 +39,67 @@ package org.rapidoid.net.impl;
  * #L%
  */
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-
-import org.rapidoid.annotation.Authors;
-import org.rapidoid.annotation.Inject;
-import org.rapidoid.annotation.Since;
-import org.rapidoid.buffer.BufGroup;
-import org.rapidoid.config.Conf;
-import org.rapidoid.log.Log;
-import org.rapidoid.net.Protocol;
-import org.rapidoid.net.TCPServer;
-import org.rapidoid.util.Cls;
-import org.rapidoid.util.Rnd;
-import org.rapidoid.util.U;
-import org.rapidoid.util.UTILS;
-
 @Authors("Nikolche Mihajlovski")
 @Since("2.0.0")
-public class RapidoidServerLoop extends AbstractEventLoop<TCPServer> implements TCPServer {
+public class RapidoidServerLoop extends AbstractLoop<Server> implements Server, TCPServerInfo {
 
-	private volatile RapidoidWorker[] workers;
+	private static final int MAX_PENDING_CONNECTIONS = 16 * 1024;
 
-	private int workerIndex = 0;
+	private volatile RapidoidWorker[] ioWorkers;
 
-	@Inject(optional = true)
-	private int port = 8080;
+	private RapidoidWorker currentWorker;
 
-	@Inject(optional = true)
-	private int workersN = Conf.cpus();
+	private final String address;
 
-	@Inject(optional = true)
-	private int bufSizeKB = 16;
+	private final int port;
 
-	@Inject(optional = true)
-	private boolean noDelay = false;
+	private int workers = ConfigUtil.cpus();
+
+	private boolean blockingAccept = false;
 
 	protected final Protocol protocol;
 
 	private final Class<? extends RapidoidHelper> helperClass;
 
-	private final Class<? extends DefaultExchange<?, ?>> exchangeClass;
+	private final Class<? extends DefaultExchange<?>> exchangeClass;
 
 	private ServerSocketChannel serverSocketChannel;
 
-	public RapidoidServerLoop(Protocol protocol, Class<? extends DefaultExchange<?, ?>> exchangeClass,
-			Class<? extends RapidoidHelper> helperClass) {
+	private final Selector selector;
+
+	private final int bufSizeKB;
+
+	private final boolean noNelay;
+
+	private final boolean syncBufs;
+
+	public RapidoidServerLoop(Protocol protocol, Class<? extends DefaultExchange<?>> exchangeClass,
+	                          Class<? extends RapidoidHelper> helperClass, String address, int port,
+	                          int workers, int bufSizeKB, boolean noNelay, boolean syncBufs) {
 		super("server");
+
 		this.protocol = protocol;
 		this.exchangeClass = exchangeClass;
+		this.address = address;
+		this.port = port;
+		this.workers = workers;
+		this.bufSizeKB = bufSizeKB;
+		this.noNelay = noNelay;
+		this.syncBufs = syncBufs;
 		this.helperClass = U.or(helperClass, RapidoidHelper.class);
-	}
 
-	@Override
-	protected void acceptOP(SelectionKey key) throws IOException {
-		ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
-
-		SocketChannel socketChannel = serverChannel.accept();
-
-		RapidoidWorker worker = workers[workerIndex];
-		workerIndex++;
-		if (workerIndex >= workers.length) {
-			workerIndex = 0;
+		try {
+			this.selector = Selector.open();
+		} catch (IOException e) {
+			Log.error("Cannot open selector!", e);
+			throw new RuntimeException(e);
 		}
-
-		worker.accept(socketChannel);
-	}
-
-	@Override
-	protected void doProcessing() {
 	}
 
 	@Override
 	protected final void beforeLoop() {
+		validate();
+
 		try {
 			openSocket();
 		} catch (IOException e) {
@@ -104,60 +107,95 @@ public class RapidoidServerLoop extends AbstractEventLoop<TCPServer> implements 
 		}
 	}
 
+	private void validate() {
+		U.must(workers <= RapidoidWorker.MAX_IO_WORKERS, "Too many workers! Maximum = %s",
+			RapidoidWorker.MAX_IO_WORKERS);
+	}
+
 	private void openSocket() throws IOException {
 		U.notNull(protocol, "protocol");
 		U.notNull(helperClass, "helperClass");
+
+		String blockingInfo = blockingAccept ? "blocking" : "non-blocking";
+		Log.debug("Initializing server", "address", address, "port", port, "sync", syncBufs, "accept", blockingInfo);
 
 		serverSocketChannel = ServerSocketChannel.open();
 
 		if ((serverSocketChannel.isOpen()) && (selector.isOpen())) {
 
-			serverSocketChannel.configureBlocking(false);
+			serverSocketChannel.configureBlocking(blockingAccept);
+
 			ServerSocket socket = serverSocketChannel.socket();
 
-			InetSocketAddress addr = new InetSocketAddress(port);
-			socket.bind(addr);
+			Log.info("!Starting server", "!address", address, "!port", port, "I/O workers", workers, "sync", syncBufs, "accept", blockingInfo);
 
-			Log.info("Opened socket", "address", addr);
-
-			serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-
-			Log.info("Waiting for connections...");
-
-			workers = new RapidoidWorker[workersN];
-			for (int i = 0; i < workers.length; i++) {
-				RapidoidHelper helper = Cls.newInstance(helperClass, exchangeClass);
-				String workerName = "server" + (i + 1);
-				BufGroup bufGroup = new BufGroup(14); // 2^14B (16 KB per buffer segment)
-				workers[i] = new RapidoidWorker(workerName, bufGroup, protocol, helper, bufSizeKB, noDelay);
-				new Thread(workers[i], workerName).start();
+			if (Env.dev()) {
+				Log.info("!Home page: http://localhost:" + port);
 			}
+
+			InetSocketAddress addr = new InetSocketAddress(address, port);
+
+			socket.setReceiveBufferSize(16 * 1024);
+			socket.setReuseAddress(true);
+			socket.bind(addr, MAX_PENDING_CONNECTIONS);
+
+			Log.debug("Opened server socket", "address", addr);
+
+			if (!blockingAccept) {
+				Log.debug("Registering accept selector");
+				serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+			}
+
+			initWorkers();
+
 		} else {
 			throw U.rte("Cannot open socket!");
 		}
 	}
 
-	@Override
-	public synchronized TCPServer start() {
-		new Thread(this, "server").start();
+	private void initWorkers() {
+		ioWorkers = new RapidoidWorker[workers];
 
-		// wait for the server thread to activate
-		while (status == LoopStatus.INIT || status == LoopStatus.BEFORE_LOOP) {
-			UTILS.sleep(50);
+		for (int i = 0; i < ioWorkers.length; i++) {
+
+			RapidoidWorkerThread workerThread = new RapidoidWorkerThread(i, protocol, exchangeClass,
+				helperClass, bufSizeKB, noNelay, syncBufs);
+			workerThread.start();
+
+			ioWorkers[i] = workerThread.getWorker();
+
+			if (i > 0) {
+				ioWorkers[i - 1].next = ioWorkers[i];
+			}
 		}
+
+		ioWorkers[ioWorkers.length - 1].next = ioWorkers[0];
+		currentWorker = ioWorkers[0];
+
+		for (RapidoidWorker worker : ioWorkers) {
+			worker.waitToStart();
+		}
+	}
+
+	@Override
+	public synchronized Server start() {
+		new RapidoidThread(this, "server").start();
 
 		return super.start();
 	}
 
 	@Override
-	public synchronized TCPServer shutdown() {
+	public synchronized Server shutdown() {
+		Log.info("Shutting down the server...");
 		stopLoop();
 
-		for (RapidoidWorker worker : workers) {
-			worker.stopLoop();
+		if (ioWorkers != null) {
+			for (RapidoidWorker worker : ioWorkers) {
+				worker.shutdown();
+			}
 		}
 
-		if ((serverSocketChannel.isOpen()) && (selector.isOpen())) {
+		if (serverSocketChannel != null && selector != null && serverSocketChannel.isOpen() && selector.isOpen()) {
 			try {
 				selector.close();
 				serverSocketChannel.close();
@@ -166,12 +204,14 @@ public class RapidoidServerLoop extends AbstractEventLoop<TCPServer> implements 
 			}
 		}
 
-		return super.shutdown();
+		super.shutdown();
+		Log.info("!The server is down.");
+		return this;
 	}
 
 	public synchronized RapidoidConnection newConnection() {
-		int rndWorker = Rnd.rnd(workers.length);
-		return workers[rndWorker].newConnection();
+		int rndWorker = Rnd.rnd(ioWorkers.length);
+		return ioWorkers[rndWorker].newConnection();
 	}
 
 	public synchronized void process(RapidoidConnection conn) {
@@ -180,6 +220,10 @@ public class RapidoidServerLoop extends AbstractEventLoop<TCPServer> implements 
 
 	@Override
 	public synchronized String process(String input) {
+		if (ioWorkers == null) {
+			initWorkers();
+		}
+
 		RapidoidConnection conn = newConnection();
 		conn.setInitial(false);
 		conn.input.append(input);
@@ -190,6 +234,70 @@ public class RapidoidServerLoop extends AbstractEventLoop<TCPServer> implements 
 
 	public Protocol getProtocol() {
 		return protocol;
+	}
+
+	@Override
+	public TCPServerInfo info() {
+		return this;
+	}
+
+	@Override
+	public long messagesProcessed() {
+		long total = 0;
+
+		for (int i = 0; i < ioWorkers.length; i++) {
+			total += ioWorkers[i].getMessagesProcessed();
+		}
+
+		return total;
+	}
+
+	@Override
+	protected void insideLoop() {
+		if (blockingAccept) {
+			processBlocking();
+		} else {
+			processNonBlocking();
+		}
+	}
+
+	private void processNonBlocking() {
+		try {
+			selector.select(50);
+		} catch (IOException e) {
+			Log.error("Select failed!", e);
+		}
+
+		try {
+			Set<SelectionKey> selectedKeys = selector.selectedKeys();
+			synchronized (selectedKeys) {
+
+				Iterator<?> iter = selectedKeys.iterator();
+
+				while (iter.hasNext()) {
+					SelectionKey key = (SelectionKey) iter.next();
+					iter.remove();
+
+					acceptChannel((ServerSocketChannel) key.channel());
+				}
+			}
+		} catch (ClosedSelectorException e) {
+			// do nothing
+		}
+	}
+
+	private void processBlocking() {
+		acceptChannel(serverSocketChannel);
+	}
+
+	private void acceptChannel(ServerSocketChannel serverChannel) {
+		try {
+			SocketChannel channel = serverSocketChannel.accept();
+			currentWorker.accept(channel);
+			currentWorker = currentWorker.next;
+		} catch (IOException e) {
+			Log.error("Acceptor error!", e);
+		}
 	}
 
 }

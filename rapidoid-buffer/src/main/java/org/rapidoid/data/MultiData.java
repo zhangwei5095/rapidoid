@@ -1,15 +1,15 @@
 package org.rapidoid.data;
 
-import java.util.Map;
-
 import org.rapidoid.annotation.Authors;
 import org.rapidoid.annotation.Since;
+
+import java.util.Map;
 
 /*
  * #%L
  * rapidoid-buffer
  * %%
- * Copyright (C) 2014 - 2015 Nikolche Mihajlovski
+ * Copyright (C) 2014 - 2016 Nikolche Mihajlovski and contributors
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,5 +36,9 @@ public interface MultiData {
 	String get(String name);
 
 	KeyValueRanges ranges();
+
+	void reset();
+
+	void putExtras(Map<String, String> extras);
 
 }
